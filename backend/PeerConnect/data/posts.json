@@ -1,0 +1,17 @@
+[
+  {"post_id": "p1", "author_id": "u9", "title": "Need help with my mentor's task",
+   "description": "It needs retrieval augmented generation. I know basic Python and LLMs.",
+   "tags": ["llm"], "level": 2},
+  {"post_id": "p2", "author_id": "u3", "title": "Building my first web app frontend",
+   "description": "Want to learn React and how to fetch data from a Postgres backend.",
+   "tags": [], "level": 1},
+  {"post_id": "p3", "author_id": "u6", "title": "Confused about classification models",
+   "description": "Trying sklearn for a course project, results are bad. Need someone who knows machine learning.",
+   "tags": ["ml"], "level": 2},
+  {"post_id": "p4", "author_id": "u1", "title": "Deploying my project",
+   "description": "How do I write a Dockerfile and run my app in containers?",
+   "tags": [], "level": 1},
+  {"post_id": "p5", "author_id": "u2", "title": "Quantum computing basics",
+   "description": "Looking for someone to explain qubits.",
+   "tags": [], "level": 1}
+]

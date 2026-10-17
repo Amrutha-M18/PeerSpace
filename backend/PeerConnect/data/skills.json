@@ -1,0 +1,9 @@
+{
+  "rag":    {"name": "Retrieval-Augmented Generation", "aliases": ["rag", "retrieval augmented generation", "retrieval-augmented", "vector db", "vector database"]},
+  "llm":    {"name": "Large Language Models", "aliases": ["llm", "llms", "large language model", "large language models", "gpt", "transformer", "transformers"]},
+  "python": {"name": "Python", "aliases": ["python", "pandas", "numpy"]},
+  "react":  {"name": "React", "aliases": ["react", "reactjs", "react.js", "jsx"]},
+  "sql":    {"name": "SQL / Databases", "aliases": ["sql", "postgres", "postgresql", "mysql", "database query", "joins"]},
+  "ml":     {"name": "Machine Learning", "aliases": ["machine learning", "ml", "scikit-learn", "sklearn", "regression", "classification"]},
+  "docker": {"name": "Docker", "aliases": ["docker", "container", "containers", "dockerfile"]}
+}
