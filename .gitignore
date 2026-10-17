@@ -1,0 +1,12 @@
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+*-server.log
+*-server-error.log
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.venv/
