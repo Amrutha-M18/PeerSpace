@@ -4,8 +4,9 @@ import type {
   OpportunityResponse,
 } from "@/types/opportunity";
 
-import OpportunityList from "./OpportunityList";
+
 import StatusMessage from "@/components/ui/StatusMessage";
+import OpportunityCard from "./Opportunities";
 
 type OpportunityResultsProps = {
   results: OpportunityResponse | null;
@@ -100,10 +101,14 @@ export default function OpportunityResults({
                       ({industryOpportunities.length})
                     </span>
                   </h3>
-
-                  <OpportunityList
-                    opportunities={industryOpportunities}
-                  />
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {industryOpportunities.map((opportunity, index) => (
+                      <OpportunityCard
+                        key={`${opportunity.apply_url}-${index}`}
+                        opportunity={opportunity}
+                      />
+                    ))}
+                  </div>
                 </section>
               )}
 
@@ -116,9 +121,14 @@ export default function OpportunityResults({
                     </span>
                   </h3>
 
-                  <OpportunityList
-                    opportunities={researchOpportunities}
-                  />
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {researchOpportunities.map((opportunity, index) => (
+                      <OpportunityCard
+                        key={`${opportunity.apply_url}-${index}`}
+                        opportunity={opportunity}
+                      />
+                    ))}
+                  </div>
                 </section>
               )}
             </div>

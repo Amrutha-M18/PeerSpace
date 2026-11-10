@@ -12,7 +12,7 @@ showcase projects, and collaborate on ideas.
 
 ## One Liner
 
-We are building a discordlike app specifically catered for being used in
+We are building a discord like app specifically catered for being used in
 educational settings.
 
 ## Features
@@ -24,6 +24,21 @@ educational settings.
 - Ask doubts and receive answers from fellow students.
 - Share personal projects and receive constructive feedback.
 - Connect with people from similar places to ease up travel.
+
+## Tech Stack
+
+### Frontend
+- Next.js 16 & React 19 – Building the user interface and handling frontend functionality.
+- TypeScript – Type-safe frontend development.
+- Tailwind CSS 4 – Styling and responsive design.
+- shadcn/ui & Base UI React – Reusable and accessible UI components.
+- Lucide React – Icons.
+
+### Backend
+- Python & FastAPI – Building backend services and REST API endpoints.
+- Uvicorn – Running the FastAPI server.
+- Requests – Fetching data from external websites.
+- BeautifulSoup4 – Parsing HTML and extracting information from web pages.
 
 ## Opportunity Discovery POC
 
