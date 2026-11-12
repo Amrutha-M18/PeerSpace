@@ -1,0 +1,60 @@
+[
+  {"user_id": "u1", "name": "Rohit", "email": "rohit@example.edu", "department": "CSE", "year": "M.Tech 2", "preferred_mode": "chat",
+   "rating_avg": 4.5, "rating_count": 6, "active_requests": 1,
+   "skills": [
+     {"skill_id": "rag",    "level": 4, "last_used": "2026-05", "open_to_teach": true, "evidence_link": "https://github.com/rohit/rag-demo"},
+     {"skill_id": "llm",    "level": 4, "last_used": "2026-08", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "python", "level": 3, "last_used": "2026-10", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u2", "name": "Meera", "email": "meera@example.edu", "department": "EE", "year": "PhD 3", "preferred_mode": "call",
+   "rating_avg": 4.8, "rating_count": 2, "active_requests": 0,
+   "skills": [
+     {"skill_id": "llm", "level": 5, "last_used": "2026-09", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "ml",  "level": 5, "last_used": "2026-09", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u3", "name": "Aman", "email": "aman@example.edu", "department": "CSE", "year": "B.Tech 4", "preferred_mode": "chat",
+   "rating_avg": 0, "rating_count": 0, "active_requests": 0,
+   "skills": [
+     {"skill_id": "rag",    "level": 3, "last_used": "2026-03", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "python", "level": 5, "last_used": "2026-10", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u4", "name": "Sara", "email": "sara@example.edu", "department": "CSE", "year": "PhD 2", "preferred_mode": "chat",
+   "rating_avg": 4.0, "rating_count": 10, "active_requests": 3,
+   "skills": [
+     {"skill_id": "rag", "level": 5, "last_used": "2026-09", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u5", "name": "Kabir", "email": "kabir@example.edu", "department": "Mech", "year": "M.Tech 1", "preferred_mode": "in-person",
+   "rating_avg": 3.0, "rating_count": 4, "active_requests": 0,
+   "skills": [
+     {"skill_id": "rag", "level": 4, "last_used": "2025-12", "open_to_teach": false, "evidence_link": ""}
+   ]},
+  {"user_id": "u6", "name": "Priya", "email": "priya@example.edu", "department": "CSE", "year": "B.Tech 3", "preferred_mode": "chat",
+   "rating_avg": 4.2, "rating_count": 5, "active_requests": 0,
+   "skills": [
+     {"skill_id": "react",  "level": 4, "last_used": "2026-10", "open_to_teach": true, "evidence_link": "https://github.com/priya/portfolio"},
+     {"skill_id": "sql",    "level": 3, "last_used": "2026-07", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u7", "name": "Dev", "email": "dev@example.edu", "department": "IT", "year": "M.Tech 2", "preferred_mode": "call",
+   "rating_avg": 3.6, "rating_count": 8, "active_requests": 2,
+   "skills": [
+     {"skill_id": "sql",    "level": 5, "last_used": "2026-09", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "docker", "level": 4, "last_used": "2026-06", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u8", "name": "Neha", "email": "neha@example.edu", "department": "Maths", "year": "PhD 1", "preferred_mode": "chat",
+   "rating_avg": 4.9, "rating_count": 12, "active_requests": 1,
+   "skills": [
+     {"skill_id": "ml",     "level": 4, "last_used": "2026-10", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "python", "level": 4, "last_used": "2026-10", "open_to_teach": true, "evidence_link": ""}
+   ]},
+  {"user_id": "u9", "name": "Arjun", "email": "arjun@example.edu", "department": "CSE", "year": "B.Tech 2", "preferred_mode": "chat",
+   "rating_avg": 0, "rating_count": 0, "active_requests": 0,
+   "skills": [
+     {"skill_id": "python", "level": 2, "last_used": "2026-10", "open_to_teach": false, "evidence_link": ""}
+   ]},
+  {"user_id": "u10", "name": "Isha", "email": "isha@example.edu", "department": "EE", "year": "M.Tech 1", "preferred_mode": "chat",
+   "rating_avg": 4.4, "rating_count": 3, "active_requests": 0,
+   "skills": [
+     {"skill_id": "react",  "level": 5, "last_used": "2026-08", "open_to_teach": true, "evidence_link": ""},
+     {"skill_id": "docker", "level": 3, "last_used": "2026-04", "open_to_teach": true, "evidence_link": ""}
+   ]}
+]
