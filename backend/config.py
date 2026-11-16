@@ -6,13 +6,11 @@ from sqlalchemy import create_engine
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-JWT_TOKEN = os.getenv("JWT_TOKEN")
+# Defaults match docker-compose.yaml, so the app also runs without a .env file.
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/mydb")
+JWT_TOKEN = os.getenv("JWT_TOKEN", "dev-only-secret-change-me-in-the-env-file")  # secret used to sign login tokens
 
 engine = create_engine(DATABASE_URL)
-
-with engine.connect() as conn:
-    print("Connected to PostgreSQL!")
 
 
 
