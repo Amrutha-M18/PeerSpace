@@ -8,7 +8,7 @@ import Hero from "@/components/ui/Hero";
 import SearchForm from "@/components/opportunities/SearchForm";
 import OpportunityResults from "@/components/opportunities/OpportunityResults";
 
-import { fetchOpportunities } from "@/lib/opportunities";
+import { fetchOpportunities } from "@/lib/api/opportunities";
 
 import type {
   DomainOption,
