@@ -3,3 +3,9 @@ uvicorn
 requests
 beautifulsoup4
 pytest
+httpx
+sqlalchemy
+psycopg2-binary
+python-dotenv
+bcrypt
+PyJWT
