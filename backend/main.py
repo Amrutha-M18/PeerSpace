@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import auth
+from . import auth, opportunities
 from .config import engine
 from .models import Base
 from .scraper import scrape_opportunities
@@ -30,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(opportunities.router)
 
 
 @app.get("/api/opportunities")
