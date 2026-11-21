@@ -57,8 +57,8 @@ to the original public source, so students can verify and apply there.
 - Clear labels for `Research project` and `Industry internship` cards.
 - Up to 10 industry internships and up to 10 research projects per search.
 
-It intentionally does **not** include login, a database, automatic scheduled
-scraping, saved opportunities, or support for every engineering branch yet.
+Live discovery does not use scheduled scraping or cover every engineering branch yet.
+The backend also includes authentication and APIs for stored opportunities.
 
 ### Run locally
 
@@ -67,9 +67,20 @@ Open two terminals in the repository root.
 Terminal 1 starts the backend:
 
 ```bash
+docker compose up -d
 python -m pip install -r backend/requirements.txt
 python -m uvicorn backend.main:app --reload
 ```
+
+The backend uses PostgreSQL. For a database created before the `organizer`
+field was added, run this migration before starting the updated backend:
+
+```bash
+docker compose exec -T postgres psql -U postgres -d mydb -f - < backend/migrations/add_opportunity_organizer.sql
+```
+
+Alternatively, run the SQL file with `psql` against your configured database.
+New databases receive the column automatically when the backend starts.
 
 Terminal 2 starts the frontend:
 
@@ -94,6 +105,22 @@ GET /api/opportunities?domain=mechanical
 The response includes `opportunities`, `warnings`, and `fetched_at`. If one
 public page is unavailable, the backend returns results from the other source
 and explains the missing source in `warnings`.
+
+Stored opportunities use the same base path without a `domain` parameter:
+
+```text
+POST /api/opportunities
+GET /api/opportunities
+GET /api/opportunities?category=hackathon&q=campus&upcoming=true
+GET /api/opportunities/{id}
+```
+
+The POST body accepts `title`, `category`, and optional `organizer`,
+`description`, `starts_on`, `ends_on`, `official_url`, and `team_size`.
+Categories are `hackathon`, `course project`, `study group`, `trek`, `sport`,
+and `other`. Listing returns a JSON array. Search matches title or description,
+and `upcoming=true` includes opportunities starting today or later. Do not
+combine `domain` with stored-opportunity filters.
 
 ### Source coverage and limitations
 

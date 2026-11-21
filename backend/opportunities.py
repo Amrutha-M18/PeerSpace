@@ -1,10 +1,11 @@
-"""Create and retrieve opportunities stored in the database."""
+"""Create, list, and retrieve opportunities stored in the database."""
 
 from datetime import date, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .database import get_db
@@ -19,6 +20,7 @@ class OpportunityCreate(BaseModel):
 
     title: str = Field(min_length=1, max_length=200)
     category: Category
+    organizer: str | None = Field(default=None, max_length=200)
     description: str | None = None
     starts_on: date | None = None
     ends_on: date | None = None
@@ -37,6 +39,21 @@ class OpportunityOut(OpportunityCreate):
 
     id: int
     created_at: datetime
+
+
+def list_opportunities(db: Session, category: str | None, q: str | None, upcoming: bool | None):
+    query = select(Opportunity)
+    if category:
+        query = query.where(Opportunity.category == category)
+    if q and q.strip():
+        keyword = q.strip()
+        query = query.where(or_(
+            Opportunity.title.icontains(keyword, autoescape=True),
+            Opportunity.description.icontains(keyword, autoescape=True),
+        ))
+    if upcoming:
+        query = query.where(Opportunity.starts_on >= date.today())
+    return [OpportunityOut.model_validate(item) for item in db.scalars(query.order_by(Opportunity.id)).all()]
 
 
 @router.post("", response_model=OpportunityOut, status_code=201)
