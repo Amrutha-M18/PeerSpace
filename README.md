@@ -70,6 +70,9 @@ PeerSpace aims to solve this problem through a structured platform.
 - `backend/tests/` — Backend tests
 - `docker-compose.yaml` — PostgreSQL configuration
 
+## Run Backend (from the project root directory)
+uvicorn backend.main:app --reload
+
 ## Notes
 
 This project is under active development.
