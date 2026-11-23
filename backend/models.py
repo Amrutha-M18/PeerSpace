@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped,mapped_column, DeclarativeBase
 
 class Base(DeclarativeBase):
@@ -16,9 +16,33 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100))
     department: Mapped[str | None] = mapped_column(String(100))
     year: Mapped[str | None] = mapped_column(String(30))         
-    skills: Mapped[list] = mapped_column(JSON, default=list)
+    # Existing JSON field retained for compatibility; profile APIs use UserSkill.
+    skills: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
+    hobbies: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
     availability: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Skill(Base):
+    __tablename__ = "skills"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+
+    __table_args__ = (
+        Index("uq_skills_name_normalized", func.lower(func.btrim(name)), unique=True),
+    )
+
+
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), primary_key=True)
+    level: Mapped[int]
+    open_to_teach: Mapped[bool]
+
+    __table_args__ = (CheckConstraint("level BETWEEN 1 AND 5", name="ck_user_skills_level"),)
 
 
 class Opportunity(Base):
