@@ -5,6 +5,8 @@ beautifulsoup4
 pytest
 httpx
 sqlalchemy
+psycopg2-binary
+pg8000
 psycopg[binary]
 python-dotenv
 bcrypt
