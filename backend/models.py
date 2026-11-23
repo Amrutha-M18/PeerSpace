@@ -17,7 +17,6 @@ class User(Base):
     # Existing JSON field retained for compatibility; profile APIs use UserSkill.
     skills: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
     hobbies: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
-    availability: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

@@ -59,7 +59,7 @@ def test_upgrade_preserves_existing_user_and_adds_defaults(profile_engine):
     with Session(profile_engine) as db:
         user = db.scalar(select(User))
         assert user.name == "Existing" and user.email == "old@example.com"
-        assert user.availability == ["Weekends"] and user.hobbies == []
+        assert user.hobbies == []
         assert user.skills == []
         # Signup-style inserts also work against the upgraded legacy schema.
         db.add(User(email="new@example.com", password_hash="hash", name="New"))
@@ -73,7 +73,7 @@ def test_upgrade_removes_teaching_flag_and_preserves_selections(profile_engine, 
         connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
         # Reproduce the previously deployed schema, including its required flag.
         connection.exec_driver_sql("ALTER TABLE user_skills ADD COLUMN open_to_teach BOOLEAN NOT NULL")
-        user_id = connection.execute(text("INSERT INTO users (email,password_hash,name,availability) VALUES ('old@example.com','hash','Existing','[]') RETURNING id")).scalar_one()
+        user_id = connection.execute(text("INSERT INTO users (email,password_hash,name) VALUES ('old@example.com','hash','Existing') RETURNING id")).scalar_one()
         skill_id = connection.execute(text("INSERT INTO skills (name) VALUES ('Python') RETURNING id")).scalar_one()
         connection.execute(
             text("INSERT INTO user_skills (user_id,skill_id,level,open_to_teach) VALUES (:user,:skill,4,:flag)"),
@@ -111,7 +111,7 @@ def test_upgrade_removes_retired_profile_fields_and_preserves_data(profile_engin
     with Session(profile_engine) as db:
         user = User(
             email="existing@example.com", password_hash="preserved-hash", name="Existing",
-            hobbies=["Photography"], availability=["Weekends"],
+            hobbies=["Photography"],
         )
         skill = Skill(name="Python")
         db.add_all([user, skill])
@@ -141,6 +141,41 @@ def test_upgrade_removes_retired_profile_fields_and_preserves_data(profile_engin
         assert read_profile(db, user).name == "Updated"
 
 
+@pytest.mark.parametrize("old_availability", ["[]", '["Weekends"]'])
+def test_upgrade_removes_availability_and_preserves_profile(profile_engine, old_availability):
+    baseline = Path(__file__).parents[1] / "migrations" / "002_user_profiles.sql"
+    with profile_engine.begin() as connection:
+        connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
+        connection.exec_driver_sql("ALTER TABLE users ADD COLUMN availability JSON NOT NULL")
+        user_id = connection.execute(
+            text("INSERT INTO users (email,password_hash,name,hobbies,availability) "
+                 "VALUES ('existing@example.com','preserved-hash','Existing',"
+                 "'[\"Photography\"]',CAST(:availability AS JSON)) RETURNING id"),
+            {"availability": old_availability},
+        ).scalar_one()
+        skill_id = connection.execute(text("INSERT INTO skills (name) VALUES ('Python') RETURNING id")).scalar_one()
+        connection.execute(
+            text("INSERT INTO user_skills (user_id,skill_id,level) VALUES (:user,:skill,4)"),
+            {"user": user_id, "skill": skill_id},
+        )
+    with Session(profile_engine) as db:
+        before = read_profile(db, db.get(User, user_id)).model_dump()
+
+    migrate_profiles(profile_engine)
+    migrate_profiles(profile_engine)
+
+    assert {column["name"] for column in inspect(profile_engine).get_columns("users")} == set(
+        User.__table__.columns.keys()
+    )
+    with Session(profile_engine) as db:
+        user = db.get(User, user_id)
+        assert read_profile(db, user).model_dump() == before
+        assert user.password_hash == "preserved-hash"
+        assert user.skills == []
+        db.add(User(email="new@example.com", password_hash="hash", name="New"))
+        db.commit()
+
+
 def test_nonempty_legacy_skills_abort_without_schema_or_data_changes(profile_engine):
     with profile_engine.begin() as connection:
         connection.exec_driver_sql(LEGACY_USERS)
@@ -157,7 +192,7 @@ def test_nonempty_legacy_skills_abort_without_schema_or_data_changes(profile_eng
 def test_postgres_enforces_skill_constraints(profile_engine):
     migrate_profiles(profile_engine)
     with profile_engine.begin() as connection:
-        user_id = connection.execute(text("INSERT INTO users (email,password_hash,name,availability) VALUES ('test@example.com','hash','Test','[]') RETURNING id")).scalar_one()
+        user_id = connection.execute(text("INSERT INTO users (email,password_hash,name) VALUES ('test@example.com','hash','Test') RETURNING id")).scalar_one()
         skill_id = connection.execute(text("INSERT INTO skills (name) VALUES ('Python') RETURNING id")).scalar_one()
         insert_sql = text("INSERT INTO user_skills (user_id,skill_id,level) VALUES (:user,:skill,:level)")
         valid = {"user": user_id, "skill": skill_id, "level": 3}

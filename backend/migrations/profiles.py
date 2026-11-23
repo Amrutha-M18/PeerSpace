@@ -17,6 +17,7 @@ def migrate_profiles(target: Engine) -> None:
             "003_shared_skill_names.sql",
             "004_remove_open_to_teach.sql",
             "005_remove_user_department_year.sql",
+            "006_remove_user_availability.sql",
         ):
             connection.exec_driver_sql((migrations / name).read_text(encoding="utf-8"))
 

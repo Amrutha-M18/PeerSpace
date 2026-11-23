@@ -38,7 +38,6 @@ class ProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: Name
-    availability: list[Name]
     hobbies: list[Name]
     skills: Selections
 
@@ -64,7 +63,6 @@ class ProfileOut(BaseModel):
     id: int
     email: str
     name: str
-    availability: list[str]
     hobbies: list[str]
     skills: list[ProfileSkill]
     created_at: datetime
@@ -79,7 +77,7 @@ def read_profile(db: Session, user: User) -> ProfileOut:
     ).all()
     return ProfileOut(
         id=user.id, email=user.email, name=user.name,
-        availability=user.availability, hobbies=user.hobbies,
+        hobbies=user.hobbies,
         created_at=user.created_at,
         skills=[ProfileSkill(skill_id=item.skill_id, name=name, level=item.level) for item, name in rows],
     )
