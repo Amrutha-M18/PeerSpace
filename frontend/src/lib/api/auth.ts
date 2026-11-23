@@ -7,7 +7,7 @@ export const login = (email: string, password: string) =>
   apiFetch<AuthResponse>("/auth/login", { method: "POST", body: { email, password } });
 
 export const register = (name: string, email: string, password: string) =>
-  apiFetch<AuthResponse>("/auth/register", { method: "POST", body: { name, email, password } });
+  apiFetch<AuthResponse>("/auth/signup", { method: "POST", body: { name, email, password } });
 
 export const logout = () => apiFetch<void>("/auth/logout", { method: "POST" });
 

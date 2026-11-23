@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -50,12 +50,27 @@ def user_json(user: User) -> dict:
 
 # ---------- protected-route dependency
 
-def get_current_user(authorization: str | None = Header(None), db: Session = Depends(get_db)) -> User:
-    """Use as `user: User = Depends(get_current_user)` on any route that needs login."""
-    if not authorization or not authorization.startswith("Bearer "):
+COOKIE_NAME = "access_token"
+
+
+def set_login_cookie(response: Response, token: str):
+    response.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax", max_age=TOKEN_HOURS * 3600)
+
+
+def get_current_user(
+    authorization: str | None = Header(None),
+    access_token: str | None = Cookie(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """Use as `user: User = Depends(get_current_user)` on any route that needs login.
+    Accepts the login cookie (browser) or an `Authorization: Bearer` header (Postman, tests)."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ")
+    elif access_token:
+        token = access_token
+    else:
         raise HTTPException(status_code=401, detail="Not logged in")
 
-    token = authorization.removeprefix("Bearer ")
     try:
         user_id = int(jwt.decode(token, JWT_TOKEN, algorithms=["HS256"])["sub"])
     except jwt.PyJWTError:
@@ -70,7 +85,7 @@ def get_current_user(authorization: str | None = Header(None), db: Session = Dep
 # ---------- routes
 
 @router.post("/signup", status_code=201)
-def signup(data: SignupIn, db: Session = Depends(get_db)):
+def signup(data: SignupIn, response: Response, db: Session = Depends(get_db)):
     email = data.email.strip().lower()
     if "@" not in email:
         raise HTTPException(status_code=422, detail="Enter a valid email")
@@ -82,15 +97,24 @@ def signup(data: SignupIn, db: Session = Depends(get_db)):
     user = User(email=email, password_hash=hash_password(data.password), name=data.name)
     db.add(user)
     db.commit()
-    return {"token": make_token(user.id), "user": user_json(user)}
+    token = make_token(user.id)
+    set_login_cookie(response, token)
+    return {"token": token, "user": user_json(user)}
 
 
 @router.post("/login")
-def login(data: LoginIn, db: Session = Depends(get_db)):
+def login(data: LoginIn, response: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == data.email.strip().lower()))
     if user is None or not check_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Wrong email or password")
-    return {"token": make_token(user.id), "user": user_json(user)}
+    token = make_token(user.id)
+    set_login_cookie(response, token)
+    return {"token": token, "user": user_json(user)}
+
+
+@router.post("/logout", status_code=204)
+def logout(response: Response):
+    response.delete_cookie(COOKIE_NAME)
 
 
 @router.get("/me")
