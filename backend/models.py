@@ -28,6 +28,7 @@ class Opportunity(Base):
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(30))           
+    organizer: Mapped[str | None] = mapped_column(String(200))
     source: Mapped[str] = mapped_column(String(20), default="user")
     is_team_based: Mapped[bool] = mapped_column(default=True)   
     starts_on: Mapped[date | None]
