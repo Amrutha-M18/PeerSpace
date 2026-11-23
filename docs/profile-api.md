@@ -15,6 +15,8 @@ is repeatable. Migration `004` drops the retired teaching flag from existing ski
 selections while preserving their user IDs, skill IDs, and proficiency levels.
 Migration `005` drops the retired department and year columns from user profiles,
 preserving accounts and all other profile data.
+Migration `006` drops the retired availability column, preserving accounts,
+hobbies, and skill selections.
 The migration also adds a unique index for skill
 names ignoring case and surrounding spaces, preserving existing names and IDs.
 If old catalog entries conflict under that rule, it fails without deleting or
@@ -79,14 +81,13 @@ Example full profile save (replace `1` with an ID from your catalog):
 ```json
 {
   "name": "Asha",
-  "availability": ["Weekends"],
   "hobbies": ["Photography", "Trekking"],
   "skills": [{"skill_id": 1, "level": 3}]
 }
 ```
 
-`PUT /api/me` requires every field shown; lists can be empty. Name, hobbies,
-and availability entries are trimmed, nonblank strings of at most 100 characters.
+`PUT /api/me` requires every field shown; lists can be empty. Name and hobby
+entries are trimmed, nonblank strings of at most 100 characters.
 Additional fields are rejected.
 
 `PUT /api/me/skills` accepts just the selections array. Both writes replace the
@@ -96,8 +97,8 @@ requires an existing positive integer `skill_id` and an integer `level` from 1â€
 Duplicate IDs and additional fields are rejected.
 The whole save is atomic, including profile fields and skills.
 
-Profile responses contain `id`, `email`, `name`, `availability`,
-`hobbies`, `skills`, and `created_at`. Returned skill selections additionally
+Profile responses contain `id`, `email`, `name`, `hobbies`, `skills`, and
+`created_at`. Returned skill selections additionally
 contain `name` from the catalog. New accounts have empty lists.
 ID, email, and creation time are read-only; password hashes are never returned.
 

@@ -134,8 +134,9 @@ Once PostgreSQL is accepting connections, apply the migration and restart:
 
 The migration prints `Profile migration completed.` on success. It is safe to
 rerun and preserves existing user and skill records. It runs the profile migrations
-`002`, `003`, `004`, and `005`. Migration `004` drops the retired teaching flag from
-skill selections; `005` drops department and year from user profiles.
+`002` through `006`. Migration `004` drops the retired teaching flag from skill
+selections; `005` drops department and year, and `006` drops availability from
+user profiles.
 Application startup also runs these profile migrations. The older opportunity
 migration remains a separate script. See the
 [profile migration details](docs/profile-api.md#setup) for data-conflict handling.

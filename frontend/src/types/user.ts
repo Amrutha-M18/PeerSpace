@@ -3,6 +3,5 @@ export interface User {
   email: string;
   name: string;
   skills: string[];
-  availability: string[];
   created_at: string;
 }
