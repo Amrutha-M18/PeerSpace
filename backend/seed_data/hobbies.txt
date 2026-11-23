@@ -1,0 +1,55 @@
+# Interest (hobby) catalogue: one interest per line. Lines starting with # are ignored.
+# Load with: python -m backend.seed_catalog hobbies
+# Sports
+Cricket
+Football
+Badminton
+Basketball
+Volleyball
+Table Tennis
+Tennis
+Kabaddi
+Athletics
+Running
+Swimming
+Cycling
+Gym and Fitness
+Yoga
+Martial Arts
+# Outdoors
+Trekking
+Camping
+Travel
+Birdwatching
+# Music and performance
+Singing
+Guitar
+Keyboard
+Drums
+Dancing
+Theatre
+Stand-up Comedy
+# Art and making
+Photography
+Painting
+Sketching
+Calligraphy
+Crafts
+Film Making
+# Mind games and reading
+Chess
+Quizzing
+Debating
+Reading
+Creative Writing
+Poetry
+Puzzles
+# Other
+Gaming
+Esports
+Cooking
+Gardening
+Volunteering
+Astronomy
+Entrepreneurship
+Open Source

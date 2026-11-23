@@ -1,0 +1,59 @@
+# Skill catalogue: one skill per line. Lines starting with # are ignored.
+# Load with: python -m backend.seed_catalog skills
+# Programming languages
+Python
+Java
+C
+C++
+JavaScript
+TypeScript
+Go
+Rust
+Kotlin
+Swift
+# Web and app development
+HTML
+CSS
+React
+Next.js
+Node.js
+Express.js
+FastAPI
+Django
+Flask
+Flutter
+React Native
+# Data and AI
+SQL
+PostgreSQL
+MongoDB
+Data Analysis
+Data Visualization
+Machine Learning
+Deep Learning
+NLP
+Computer Vision
+Statistics
+# Systems and tools
+Linux
+Git
+Docker
+Cloud Computing
+Cybersecurity
+Embedded Systems
+Arduino
+Robotics
+MATLAB
+# Design and product
+UI/UX Design
+Figma
+Graphic Design
+Video Editing
+3D Modelling
+CAD
+Product Management
+# Communication
+Public Speaking
+Technical Writing
+Content Writing
+Event Management

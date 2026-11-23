@@ -16,7 +16,7 @@ def selection(skill_id=1, level=3):
 def profile_payload():
     return {
         "name": " Updated Student ",
-        "hobbies": [" Photography ", "Trekking"],
+        "hobbies": [1, 2],
         "skills": [selection()],
     }
 
@@ -29,6 +29,7 @@ def test_new_account_and_auth_compatibility(signed_in):
     assert body["skills"] == body["hobbies"] == []
     assert set(signed_in.get("/api/auth/me").json()) == {"id", "email", "name"}
     assert signed_in.get("/api/skills").json() == [{"id": 1, "name": "Python"}, {"id": 2, "name": "SQL"}]
+    assert signed_in.get("/api/hobbies").json() == [{"id": 1, "name": "Photography"}, {"id": 2, "name": "Trekking"}]
 
 
 def test_full_profile_and_skill_replacement(signed_in):
@@ -36,7 +37,7 @@ def test_full_profile_and_skill_replacement(signed_in):
     assert response.status_code == 200
     saved = response.json()
     assert saved["name"] == "Updated Student"
-    assert saved["hobbies"] == ["Photography", "Trekking"]
+    assert saved["hobbies"] == [{"hobby_id": 1, "name": "Photography"}, {"hobby_id": 2, "name": "Trekking"}]
     assert saved["skills"] == [{**selection(), "name": "Python"}]
     assert signed_in.get("/api/me").json() == saved
     assert signed_in.put("/api/me", json=profile_payload()).json() == saved
@@ -77,7 +78,9 @@ def test_invalid_skills_are_atomic_for_both_endpoints(signed_in, skills):
     {"name": " "}, {"name": "x" * 101}, {"name": None},
     {"department": "Computer Science"}, {"department": None},
     {"year": "2"}, {"year": None},
-    {"hobbies": [" "]}, {"hobbies": None},
+    {"hobbies": [" "]}, {"hobbies": None}, {"hobbies": ["Photography"]},
+    {"hobbies": [999]}, {"hobbies": [1, 1]}, {"hobbies": [0]}, {"hobbies": ["1"]},
+    {"hobbies": [{"hobby_id": 1, "level": 2}]}, {"hobbies": [True]},
     {"availability": ["Weekends"]}, {"availability": []}, {"availability": None},
     {"id": 2}, {"email": "changed@example.com"}, {"created_at": "2026-01-01"},
     {"password_hash": "bad"}, {"user_id": 2},
@@ -108,6 +111,7 @@ def test_every_endpoint_requires_valid_authentication(signed_in, kind):
     headers = {} if kind == "missing" else {"Authorization": "Bearer " + token}
     for method, path, body in (("GET", "/api/me", None), ("GET", "/api/skills", None),
                                ("POST", "/api/skills", {"name": "Rust"}),
+                               ("GET", "/api/hobbies", None), ("POST", "/api/hobbies", {"name": "Chess"}),
                                ("PUT", "/api/me", profile_payload()), ("PUT", "/api/me/skills", [])):
         assert signed_in.request(method, path, headers=headers, json=body).status_code == 401
 
@@ -139,3 +143,19 @@ def test_commit_failure_rolls_back_entire_save(signed_in, profile_db, monkeypatc
     assert signed_in.get("/api/me").json() == before
     with profile_db() as db:
         assert db.scalar(select(User.name)) == before["name"]
+
+
+def test_hobbies_are_saved_and_skills_endpoint_leaves_them_alone(signed_in):
+    saved = signed_in.put("/api/me", json=profile_payload()).json()
+    after_skills = signed_in.put("/api/me/skills", json=[selection(2, 5)]).json()
+    assert after_skills["hobbies"] == saved["hobbies"]
+    changed = signed_in.put("/api/me", json={**profile_payload(), "hobbies": [2]}).json()
+    assert changed["hobbies"] == [{"hobby_id": 2, "name": "Trekking"}]
+
+
+def test_added_hobby_is_shared_and_reused(signed_in):
+    created = signed_in.post("/api/hobbies", json={"name": " Chess "})
+    assert created.status_code == 201
+    again = signed_in.post("/api/hobbies", json={"name": "chess"})
+    assert again.status_code == 200 and again.json() == created.json()
+    assert created.json() in signed_in.get("/api/hobbies").json()

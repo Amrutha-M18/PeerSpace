@@ -38,11 +38,11 @@ def test_startup_applies_profile_migrations(profile_engine, monkeypatch):
         })
         assert signup.status_code == 201
         saved = client.put("/api/me", json={
-            "name": "Updated", "hobbies": ["Photography"], "skills": [],
+            "name": "Updated", "hobbies": [], "skills": [],
         }, headers={"Authorization": "Bearer " + signup.json()["token"]})
         assert saved.status_code == 200
         assert saved.json()["name"] == "Updated"
-        assert saved.json()["hobbies"] == ["Photography"]
+        assert saved.json()["hobbies"] == []
         assert set(saved.json()) == {"id", "email", "name", "hobbies", "skills", "created_at"}
     assert {column["name"] for column in inspect(profile_engine).get_columns("user_skills")} == {
         "user_id", "skill_id", "level",

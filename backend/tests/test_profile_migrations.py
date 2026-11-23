@@ -8,8 +8,11 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.migrations.profiles import migrate_profiles
-from backend.models import Skill, User, UserSkill
+from backend.models import Hobby, Skill, User, UserHobby, UserSkill
 from backend.profiles import read_profile
+
+# The hobby tables, so a profile can be read from an old schema before it is migrated.
+HOBBY_TABLES = (Path(__file__).parents[1] / "migrations" / "007_hobby_catalog.sql").read_text(encoding="utf-8")
 
 LEGACY_USERS = """
 CREATE TABLE users (
@@ -25,7 +28,7 @@ def test_fresh_migration_matches_models_and_is_repeatable(profile_engine):
     migrate_profiles(profile_engine)
     migrate_profiles(profile_engine)
     inspector = inspect(profile_engine)
-    for model in (User, Skill, UserSkill):
+    for model in (User, Skill, UserSkill, Hobby, UserHobby):
         expected = model.__table__
         columns = inspector.get_columns(expected.name)
         assert {column["name"] for column in columns} == set(expected.columns.keys())
@@ -108,6 +111,7 @@ def test_upgrade_removes_retired_profile_fields_and_preserves_data(profile_engin
         connection.exec_driver_sql(
             "ALTER TABLE users ADD COLUMN department VARCHAR(100), ADD COLUMN year VARCHAR(30)"
         )
+        connection.exec_driver_sql(HOBBY_TABLES)
     with Session(profile_engine) as db:
         user = User(
             email="existing@example.com", password_hash="preserved-hash", name="Existing",
@@ -147,6 +151,7 @@ def test_upgrade_removes_availability_and_preserves_profile(profile_engine, old_
     with profile_engine.begin() as connection:
         connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
         connection.exec_driver_sql("ALTER TABLE users ADD COLUMN availability JSON NOT NULL")
+        connection.exec_driver_sql(HOBBY_TABLES)
         user_id = connection.execute(
             text("INSERT INTO users (email,password_hash,name,hobbies,availability) "
                  "VALUES ('existing@example.com','preserved-hash','Existing',"
@@ -232,3 +237,29 @@ def test_catalog_upgrade_does_not_delete_conflicting_old_entries(profile_engine)
     with profile_engine.connect() as connection:
         assert connection.execute(text("SELECT COUNT(*) FROM skills")).scalar_one() == 2
     assert "uq_skills_name_normalized" not in {index["name"] for index in inspect(profile_engine).get_indexes("skills")}
+
+
+def test_old_free_text_hobbies_become_catalogue_entries(profile_engine):
+    baseline = Path(__file__).parents[1] / "migrations" / "002_user_profiles.sql"
+    with profile_engine.begin() as connection:
+        connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
+        connection.exec_driver_sql(
+            "INSERT INTO users (email,password_hash,name,hobbies) VALUES "
+            "('a@example.com','h','A','[\" Photography \", \"Chess\"]'),"
+            "('b@example.com','h','B','[\"photography\", \"  \"]')"
+        )
+    migrate_profiles(profile_engine)
+    migrate_profiles(profile_engine)
+    with Session(profile_engine) as db:
+        names = sorted(name.lower() for name in db.scalars(select(Hobby.name)))
+        assert names == ["chess", "photography"]
+        assert db.scalars(select(UserHobby)).all() == []  # no level was recorded, so nothing is selected
+
+
+def test_level_column_from_earlier_draft_is_dropped(profile_engine):
+    migrate_profiles(profile_engine)
+    with profile_engine.begin() as connection:
+        connection.exec_driver_sql("ALTER TABLE user_hobbies ADD COLUMN level INTEGER")
+    migrate_profiles(profile_engine)
+    columns = {column["name"] for column in inspect(profile_engine).get_columns("user_hobbies")}
+    assert columns == {"user_id", "hobby_id"}

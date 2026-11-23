@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from backend.config import engine as application_engine
 from backend.database import get_db
 from backend.main import app
-from backend.models import Base, Skill
+from backend.models import Base, Hobby, Skill
 
 
 @pytest.fixture(scope="session")
@@ -88,7 +88,7 @@ def client(profile_db):
 @pytest.fixture
 def profile_client(client, profile_db):
     with profile_db() as db:
-        db.add_all([Skill(name="Python"), Skill(name="SQL")])
+        db.add_all([Skill(name="Python"), Skill(name="SQL"), Hobby(name="Photography"), Hobby(name="Trekking")])
         db.commit()
     return client
 

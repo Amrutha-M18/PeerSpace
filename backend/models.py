@@ -16,6 +16,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100))
     # Existing JSON field retained for compatibility; profile APIs use UserSkill.
     skills: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
+    # Old free-text hobbies, kept for compatibility; profile APIs use UserHobby.
     hobbies: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -39,6 +40,26 @@ class UserSkill(Base):
     level: Mapped[int]
 
     __table_args__ = (CheckConstraint("level BETWEEN 1 AND 5", name="ck_user_skills_level"),)
+
+
+class Hobby(Base):
+    """Interest catalogue (shown as "interests" in the frontend)."""
+    __tablename__ = "hobbies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+
+    __table_args__ = (
+        Index("uq_hobbies_name_normalized", func.lower(func.btrim(name)), unique=True),
+    )
+
+
+class UserHobby(Base):
+    """Which interests a user picked. Interests have no level, unlike skills."""
+    __tablename__ = "user_hobbies"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    hobby_id: Mapped[int] = mapped_column(ForeignKey("hobbies.id"), primary_key=True)
 
 
 class Opportunity(Base):
