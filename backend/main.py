@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 from . import auth, opportunities, profiles
 from .config import engine
 from .database import get_db
+from .migrations.profiles import migrate_profiles
 from .models import Base
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(engine)  # creates tables that don't exist yet
+    migrate_profiles(engine)          # upgrades older databases (adds users.hobbies etc.); safe to re-run
     yield
 
 
