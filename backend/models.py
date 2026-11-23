@@ -14,8 +14,6 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(100))
-    department: Mapped[str | None] = mapped_column(String(100))
-    year: Mapped[str | None] = mapped_column(String(30))         
     # Existing JSON field retained for compatibility; profile APIs use UserSkill.
     skills: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
     hobbies: Mapped[list] = mapped_column(JSON, default=list, server_default=text("'[]'"))
@@ -40,7 +38,6 @@ class UserSkill(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), primary_key=True)
     level: Mapped[int]
-    open_to_teach: Mapped[bool]
 
     __table_args__ = (CheckConstraint("level BETWEEN 1 AND 5", name="ck_user_skills_level"),)
 

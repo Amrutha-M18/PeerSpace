@@ -6,18 +6,23 @@ Follow [backend setup](../README.md#backend-setup) for first-time installation,
 or [updating a local database](../README.md#updating-your-local-database) after
 pulling changes. Commands run from the repository root. The profile migration
 runner is `python -m backend.migrations.profiles` when using the backend environment.
+Application startup in `backend/main.py` also runs this migration runner.
 
 The migration runs in one transaction and supports empty and existing databases.
 It creates the profile tables and adds hobbies; application startup creates other
 missing tables. `create_all()` alone does not upgrade existing tables. The migration
-is repeatable. The migration also adds a unique index for skill
+is repeatable. Migration `004` drops the retired teaching flag from existing skill
+selections while preserving their user IDs, skill IDs, and proficiency levels.
+Migration `005` drops the retired department and year columns from user profiles,
+preserving accounts and all other profile data.
+The migration also adds a unique index for skill
 names ignoring case and surrounding spaces, preserving existing names and IDs.
 If old catalog entries conflict under that rule, it fails without deleting or
 merging them; resolve the conflicting names before retrying.
 The old `users.skills` JSON column is retained
 for compatibility but is no longer read or written by profile APIs. If it contains
 nonempty data, the migration aborts without changes: explicitly map those names to
-catalog skills, collect actual levels and teaching preferences, and archive/clear
+catalog skills, collect actual levels, and archive/clear
 the legacy values before retrying. No proficiency values are inferred.
 
 ## Updating each teammate's local database
@@ -64,7 +69,7 @@ Any signed-in student can add a missing skill; it immediately appears in the sha
 catalog for other students. Creating it does not add it to anyone's profile.
 The frontend should offer an "Add skill" action when the desired name is missing,
 call `POST /api/skills`, and use its returned ID in the student's skill selection
-with a level and teaching preference. Refresh the catalog to show new entries.
+with a level. Refresh the catalog to show new entries.
 
 Students populate the catalog by adding skills. IDs are database assigned: obtain
 them from `GET /api/skills` or the creation response.
@@ -74,30 +79,27 @@ Example full profile save (replace `1` with an ID from your catalog):
 ```json
 {
   "name": "Asha",
-  "department": "Computer Science",
-  "year": "2",
   "availability": ["Weekends"],
   "hobbies": ["Photography", "Trekking"],
-  "skills": [{"skill_id": 1, "level": 3, "open_to_teach": true}]
+  "skills": [{"skill_id": 1, "level": 3}]
 }
 ```
 
-`PUT /api/me` requires every field shown. Department and year can be `null`;
-lists can be empty. Name, department, hobbies, and availability entries are
-trimmed, nonblank strings of at most 100 characters; year has a 30-character limit.
-For optional department/year, use `null` rather than a blank string.
+`PUT /api/me` requires every field shown; lists can be empty. Name, hobbies,
+and availability entries are trimmed, nonblank strings of at most 100 characters.
+Additional fields are rejected.
 
 `PUT /api/me/skills` accepts just the selections array. Both writes replace the
 entire selected skill list; `[]` clears it. Skill-only writes preserve all other
 profile fields. Repeating a save does not create duplicate selections. Each skill
-requires an existing positive integer `skill_id`, an integer `level` from 1–5,
-and a JSON boolean `open_to_teach`. Duplicate IDs and additional fields are rejected.
+requires an existing positive integer `skill_id` and an integer `level` from 1–5.
+Duplicate IDs and additional fields are rejected.
 The whole save is atomic, including profile fields and skills.
 
-Profile responses contain `id`, `email`, `name`, `department`, `year`, `availability`,
+Profile responses contain `id`, `email`, `name`, `availability`,
 `hobbies`, `skills`, and `created_at`. Returned skill selections additionally
-contain `name` from the catalog. New accounts have null department/year and empty
-lists. ID, email, and creation time are read-only; password hashes are never returned.
+contain `name` from the catalog. New accounts have empty lists.
+ID, email, and creation time are read-only; password hashes are never returned.
 
 Missing/invalid/expired tokens return `401`; invalid fields, unknown skills, and
 duplicate selections return `422`. Errors use FastAPI's `detail` property, which

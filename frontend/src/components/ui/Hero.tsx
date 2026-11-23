@@ -1,4 +1,3 @@
-
 export default function Hero() {
   return (
     <div className="mx-auto mb-8 max-w-5xl">

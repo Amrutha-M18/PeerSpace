@@ -20,11 +20,11 @@ def test_added_skill_is_shared_and_can_be_selected(signed_in):
     assert skill in signed_in.get("/api/skills").json()
     assert signed_in.post("/api/skills", json={"name": "rust"}).json() == skill
     saved = signed_in.put("/api/me/skills", json=[{
-        "skill_id": skill["id"], "level": 4, "open_to_teach": True,
+        "skill_id": skill["id"], "level": 4,
     }])
     assert saved.status_code == 200
     assert saved.json()["skills"] == [{
-        "skill_id": skill["id"], "name": "Rust", "level": 4, "open_to_teach": True,
+        "skill_id": skill["id"], "name": "Rust", "level": 4,
     }]
     signed_in.headers["Authorization"] = original_auth
     assert signed_in.get("/api/me").json()["skills"] == []

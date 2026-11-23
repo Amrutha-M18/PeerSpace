@@ -52,7 +52,7 @@ PeerSpace aims to solve this problem through a structured platform.
 - Backend signup and login APIs
 - Basic application homepage
 - Backend health-check endpoint
-- Authenticated profile read/update APIs, hobbies, and structured skills with proficiency and teaching preferences
+- Authenticated profile read/update APIs, hobbies, and structured skills with proficiency
 
 See [Profile backend setup and API reference](docs/profile-api.md) for migration,
 teammate database updates, endpoint contracts, and tests. Profile frontend integration
@@ -110,7 +110,7 @@ differs. Plain PostgreSQL URLs use the installed `psycopg2` driver. If you chang
 `PEERSPACE_DB_PORT`, update the port in `DATABASE_URL` too.
 
 Each developer's virtual environment and database are local. Application startup
-creates other missing tables; it does not upgrade existing table definitions.
+creates missing tables and runs the profile migrations to upgrade existing profile tables.
 A fresh skill catalog is empty; signed-in students add skills through the API.
 
 ## Updating Your Local Database
@@ -133,8 +133,11 @@ Once PostgreSQL is accepting connections, apply the migration and restart:
 ```
 
 The migration prints `Profile migration completed.` on success. It is safe to
-rerun and preserves existing records. It runs the profile migrations `002` and
-`003`; the older opportunity migration remains a separate script. See the
+rerun and preserves existing user and skill records. It runs the profile migrations
+`002`, `003`, `004`, and `005`. Migration `004` drops the retired teaching flag from
+skill selections; `005` drops department and year from user profiles.
+Application startup also runs these profile migrations. The older opportunity
+migration remains a separate script. See the
 [profile migration details](docs/profile-api.md#setup) for data-conflict handling.
 
 Pulling code does not update database structure automatically. Each local Docker

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -15,7 +15,6 @@ from .models import Skill, User, UserSkill
 
 router = APIRouter(prefix="/api", tags=["profiles"])
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
-Year = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
 
 
 class SkillSelection(BaseModel):
@@ -23,7 +22,6 @@ class SkillSelection(BaseModel):
 
     skill_id: int = Field(strict=True, gt=0, le=2147483647)
     level: int = Field(strict=True, ge=1, le=5)
-    open_to_teach: StrictBool
 
 
 def unique_skills(skills: list[SkillSelection]) -> list[SkillSelection]:
@@ -40,8 +38,6 @@ class ProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: Name
-    department: Name | None
-    year: Year | None
     availability: list[Name]
     hobbies: list[Name]
     skills: Selections
@@ -68,8 +64,6 @@ class ProfileOut(BaseModel):
     id: int
     email: str
     name: str
-    department: str | None
-    year: str | None
     availability: list[str]
     hobbies: list[str]
     skills: list[ProfileSkill]
@@ -84,11 +78,10 @@ def read_profile(db: Session, user: User) -> ProfileOut:
         .order_by(Skill.name, Skill.id)
     ).all()
     return ProfileOut(
-        id=user.id, email=user.email, name=user.name, department=user.department,
-        year=user.year, availability=user.availability, hobbies=user.hobbies,
+        id=user.id, email=user.email, name=user.name,
+        availability=user.availability, hobbies=user.hobbies,
         created_at=user.created_at,
-        skills=[ProfileSkill(skill_id=item.skill_id, name=name, level=item.level,
-                             open_to_teach=item.open_to_teach) for item, name in rows],
+        skills=[ProfileSkill(skill_id=item.skill_id, name=name, level=item.level) for item, name in rows],
     )
 
 

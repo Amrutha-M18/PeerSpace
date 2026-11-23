@@ -44,7 +44,7 @@ def test_fresh_migration_matches_models_and_is_repeatable(profile_engine):
         skill = Skill(name="Python")
         db.add_all([user, skill])
         db.commit()
-        db.add(UserSkill(user_id=user.id, skill_id=skill.id, level=5, open_to_teach=True))
+        db.add(UserSkill(user_id=user.id, skill_id=skill.id, level=5))
         db.commit()
         profile = read_profile(db, user)
         assert profile.hobbies == []
@@ -66,6 +66,81 @@ def test_upgrade_preserves_existing_user_and_adds_defaults(profile_engine):
         db.commit()
 
 
+@pytest.mark.parametrize("teaching_flag", [True, False])
+def test_upgrade_removes_teaching_flag_and_preserves_selections(profile_engine, teaching_flag):
+    baseline = Path(__file__).parents[1] / "migrations" / "002_user_profiles.sql"
+    with profile_engine.begin() as connection:
+        connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
+        # Reproduce the previously deployed schema, including its required flag.
+        connection.exec_driver_sql("ALTER TABLE user_skills ADD COLUMN open_to_teach BOOLEAN NOT NULL")
+        user_id = connection.execute(text("INSERT INTO users (email,password_hash,name,availability) VALUES ('old@example.com','hash','Existing','[]') RETURNING id")).scalar_one()
+        skill_id = connection.execute(text("INSERT INTO skills (name) VALUES ('Python') RETURNING id")).scalar_one()
+        connection.execute(
+            text("INSERT INTO user_skills (user_id,skill_id,level,open_to_teach) VALUES (:user,:skill,4,:flag)"),
+            {"user": user_id, "skill": skill_id, "flag": teaching_flag},
+        )
+
+    migrate_profiles(profile_engine)
+    migrate_profiles(profile_engine)
+
+    assert {column["name"] for column in inspect(profile_engine).get_columns("user_skills")} == {
+        "user_id", "skill_id", "level",
+    }
+    with Session(profile_engine) as db:
+        user = db.get(User, user_id)
+        assert user.email == "old@example.com"
+        assert read_profile(db, user).skills[0].model_dump() == {
+            "skill_id": skill_id, "name": "Python", "level": 4,
+        }
+        skill = Skill(name="SQL")
+        db.add(skill)
+        db.flush()
+        db.add(UserSkill(user_id=user_id, skill_id=skill.id, level=2))
+        db.commit()
+        assert len(read_profile(db, user).skills) == 2
+
+
+@pytest.mark.parametrize("retired_values", [("Computer Science", "2"), (None, None)])
+def test_upgrade_removes_retired_profile_fields_and_preserves_data(profile_engine, retired_values):
+    baseline = Path(__file__).parents[1] / "migrations" / "002_user_profiles.sql"
+    with profile_engine.begin() as connection:
+        connection.exec_driver_sql(baseline.read_text(encoding="utf-8"))
+        connection.exec_driver_sql(
+            "ALTER TABLE users ADD COLUMN department VARCHAR(100), ADD COLUMN year VARCHAR(30)"
+        )
+    with Session(profile_engine) as db:
+        user = User(
+            email="existing@example.com", password_hash="preserved-hash", name="Existing",
+            hobbies=["Photography"], availability=["Weekends"],
+        )
+        skill = Skill(name="Python")
+        db.add_all([user, skill])
+        db.flush()
+        db.add(UserSkill(user_id=user.id, skill_id=skill.id, level=4))
+        db.execute(
+            text("UPDATE users SET department=:department, year=:year WHERE id=:id"),
+            {"department": retired_values[0], "year": retired_values[1], "id": user.id},
+        )
+        db.commit()
+        user_id = user.id
+        before = read_profile(db, user).model_dump()
+
+    migrate_profiles(profile_engine)
+    migrate_profiles(profile_engine)
+
+    assert {column["name"] for column in inspect(profile_engine).get_columns("users")} == set(
+        User.__table__.columns.keys()
+    )
+    with Session(profile_engine) as db:
+        user = db.get(User, user_id)
+        assert read_profile(db, user).model_dump() == before
+        assert user.password_hash == "preserved-hash"
+        assert user.skills == []
+        user.name = "Updated"
+        db.commit()
+        assert read_profile(db, user).name == "Updated"
+
+
 def test_nonempty_legacy_skills_abort_without_schema_or_data_changes(profile_engine):
     with profile_engine.begin() as connection:
         connection.exec_driver_sql(LEGACY_USERS)
@@ -84,9 +159,9 @@ def test_postgres_enforces_skill_constraints(profile_engine):
     with profile_engine.begin() as connection:
         user_id = connection.execute(text("INSERT INTO users (email,password_hash,name,availability) VALUES ('test@example.com','hash','Test','[]') RETURNING id")).scalar_one()
         skill_id = connection.execute(text("INSERT INTO skills (name) VALUES ('Python') RETURNING id")).scalar_one()
-        insert_sql = text("INSERT INTO user_skills (user_id,skill_id,level,open_to_teach) VALUES (:user,:skill,:level,:teach)")
-        valid = {"user": user_id, "skill": skill_id, "level": 3, "teach": False}
-        for invalid in ({"level": 0}, {"level": 6}, {"skill": 9999}, {"user": 9999}, {"teach": None}):
+        insert_sql = text("INSERT INTO user_skills (user_id,skill_id,level) VALUES (:user,:skill,:level)")
+        valid = {"user": user_id, "skill": skill_id, "level": 3}
+        for invalid in ({"level": 0}, {"level": 6}, {"level": None}, {"skill": 9999}, {"user": 9999}):
             with pytest.raises(IntegrityError):
                 with connection.begin_nested():
                     connection.execute(insert_sql, {**valid, **invalid})

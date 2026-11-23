@@ -17,7 +17,8 @@ from .models import Base
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)  # creates tables that don't exist yet
-    migrate_profiles(engine)          # upgrades older databases (adds users.hobbies etc.); safe to re-run
+    # Upgrade existing profile tables and remove retired fields (migrations 002-005).
+    migrate_profiles(engine)  # safe to re-run
     yield
 
 

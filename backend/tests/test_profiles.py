@@ -9,13 +9,13 @@ from backend.config import JWT_TOKEN
 from backend.models import User
 
 
-def selection(skill_id=1, level=3, open_to_teach=True):
-    return {"skill_id": skill_id, "level": level, "open_to_teach": open_to_teach}
+def selection(skill_id=1, level=3):
+    return {"skill_id": skill_id, "level": level}
 
 
 def profile_payload():
     return {
-        "name": " Updated Student ", "department": " Computer Science ", "year": "2",
+        "name": " Updated Student ",
         "availability": [" Weekends "], "hobbies": [" Photography ", "Trekking"],
         "skills": [selection()],
     }
@@ -25,8 +25,7 @@ def test_new_account_and_auth_compatibility(signed_in):
     response = signed_in.get("/api/me")
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"id", "email", "name", "department", "year", "availability", "hobbies", "skills", "created_at"}
-    assert body["department"] is None and body["year"] is None
+    assert set(body) == {"id", "email", "name", "availability", "hobbies", "skills", "created_at"}
     assert body["skills"] == body["hobbies"] == body["availability"] == []
     assert set(signed_in.get("/api/auth/me").json()) == {"id", "email", "name"}
     assert signed_in.get("/api/skills").json() == [{"id": 1, "name": "Python"}, {"id": 2, "name": "SQL"}]
@@ -37,14 +36,13 @@ def test_full_profile_and_skill_replacement(signed_in):
     assert response.status_code == 200
     saved = response.json()
     assert saved["name"] == "Updated Student"
-    assert saved["department"] == "Computer Science"
     assert saved["hobbies"] == ["Photography", "Trekking"]
     assert saved["availability"] == ["Weekends"]
     assert saved["skills"] == [{**selection(), "name": "Python"}]
     assert signed_in.get("/api/me").json() == saved
     assert signed_in.put("/api/me", json=profile_payload()).json() == saved
 
-    for skills in ([selection(1, 1), selection(2, 5, False)], [selection(2, 2)], []):
+    for skills in ([selection(1, 1), selection(2, 5)], [selection(2, 2)], []):
         response = signed_in.put("/api/me/skills", json=skills)
         assert response.status_code == 200
         current = response.json()
@@ -53,9 +51,9 @@ def test_full_profile_and_skill_replacement(signed_in):
         assert signed_in.get("/api/me").json() == current
 
 
-def test_full_profile_can_clear_optional_fields(signed_in):
+def test_full_profile_can_clear_lists(signed_in):
     assert signed_in.put("/api/me", json=profile_payload()).status_code == 200
-    cleared = {"name": "Student", "department": None, "year": None, "availability": [], "hobbies": [], "skills": []}
+    cleared = {"name": "Student", "availability": [], "hobbies": [], "skills": []}
     response = signed_in.put("/api/me", json=cleared)
     assert response.status_code == 200
     assert all(response.json()[key] == value for key, value in cleared.items())
@@ -65,9 +63,9 @@ def test_full_profile_can_clear_optional_fields(signed_in):
     [selection(999)], [selection(), selection()],
     [selection(level=0)], [selection(level=6)], [selection(level=1.5)],
     [selection(level="3")], [selection(level=True)],
-    [selection(open_to_teach="true")], [selection(open_to_teach=1)],
+    [{**selection(), "open_to_teach": True}],
     [selection(skill_id=True)], [selection(skill_id="1")], [selection(skill_id=0)],
-    [{"skill_id": 1, "level": 2}], [{**selection(), "extra": True}],
+    [{"skill_id": 1}], [{"level": 2}], [{**selection(), "extra": True}],
 ])
 def test_invalid_skills_are_atomic_for_both_endpoints(signed_in, skills):
     original = signed_in.put("/api/me", json=profile_payload()).json()
@@ -78,7 +76,8 @@ def test_invalid_skills_are_atomic_for_both_endpoints(signed_in, skills):
 
 @pytest.mark.parametrize("change", [
     {"name": " "}, {"name": "x" * 101}, {"name": None},
-    {"department": "x" * 101}, {"year": "x" * 31},
+    {"department": "Computer Science"}, {"department": None},
+    {"year": "2"}, {"year": None},
     {"hobbies": [" "]}, {"availability": [3]}, {"hobbies": None},
     {"id": 2}, {"email": "changed@example.com"}, {"created_at": "2026-01-01"},
     {"password_hash": "bad"}, {"user_id": 2},
@@ -99,6 +98,7 @@ def test_full_replacement_requires_every_editable_field(signed_in):
 @pytest.mark.parametrize("kind", ["missing", "invalid", "expired", "unknown_user"])
 def test_every_endpoint_requires_valid_authentication(signed_in, kind):
     signed_in.headers.pop("Authorization")
+    signed_in.cookies.clear()
     claims = {"sub": "1", "exp": datetime.now(timezone.utc) + timedelta(hours=1)}
     if kind == "expired":
         claims["exp"] = datetime.now(timezone.utc) - timedelta(hours=1)
