@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from . import auth, opportunities
+from . import auth, opportunities, profiles
 from .config import engine
 from .database import get_db
 from .models import Base
@@ -31,6 +31,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(opportunities.router)
+app.include_router(profiles.router)
 
 
 @app.get("/api/opportunities")

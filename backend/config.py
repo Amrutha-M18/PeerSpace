@@ -3,6 +3,7 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 
 load_dotenv()
 
@@ -10,7 +11,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/mydb")
 JWT_TOKEN = os.getenv("JWT_TOKEN", "dev-only-secret-change-me-in-the-env-file")  # secret used to sign login tokens
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(database_url)
 
 
 
