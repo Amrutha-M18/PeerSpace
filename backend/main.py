@@ -1,16 +1,12 @@
-"""HTTP API for the PeerSpace opportunity discovery POC."""
-
+"""Main FastAPI application for the PeerSpace platform."""
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import auth
 from .config import engine
 from .models import Base
-from .scraper import scrape_opportunities
-from .sources import DOMAIN_LABELS
 
 
 @asynccontextmanager
@@ -30,22 +26,6 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-
-
-@app.get("/api/opportunities")
-def get_opportunities(domain: str = Query(..., description="cse, electrical, or mechanical")):
-    """Fetch current public opportunities for one supported engineering domain."""
-    if domain not in DOMAIN_LABELS:
-        allowed = ", ".join(DOMAIN_LABELS)
-        raise HTTPException(status_code=400, detail=f"Unsupported domain. Choose one of: {allowed}.")
-
-    opportunities, warnings = scrape_opportunities(domain)
-    return {
-        "domain": domain,
-        "opportunities": opportunities,
-        "warnings": warnings,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
 
 
 @app.get("/health")

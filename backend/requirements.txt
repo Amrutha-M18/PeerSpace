@@ -6,6 +6,8 @@ pytest
 httpx
 sqlalchemy
 psycopg2-binary
+psycopg2-binary
+pg8000
 python-dotenv
 bcrypt
 PyJWT
