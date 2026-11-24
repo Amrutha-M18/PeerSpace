@@ -94,3 +94,58 @@ def test_teams_respect_the_opportunity(signed_in):
 
     solo = new_opportunity(is_team_based=False)
     assert signed_in.post(f"/api/opportunities/{solo}/teams", json={"name": "T", "capacity": 2}).status_code == 422
+
+
+def test_feed_is_personalised_by_interests(signed_in):
+    client = signed_in
+    today = date.today()
+    hobbies = {h["name"]: h["id"] for h in client.get("/api/hobbies").json()}
+    # The signed-in student likes trekking and football.
+    for name in ("Trekking", "Football"):
+        if name not in hobbies:
+            hobbies[name] = client.post("/api/hobbies", json={"name": name}).json()["id"]
+    profile = client.get("/api/me").json()
+    assert client.put("/api/me", json={"name": profile["name"], "skills": [], "hobbies": [hobbies["Trekking"], hobbies["Football"]]}).status_code == 200
+
+    soon = str(today + timedelta(days=3))
+    later = str(today + timedelta(days=20))
+    for item in [
+        {"title": "Code Sprint", "category": "hackathon", "starts_on": soon},
+        {"title": "Hostel Football League", "category": "sport", "starts_on": later},   # names an interest
+        {"title": "Basketball Cup", "category": "sport", "starts_on": soon},            # sport only
+        {"title": "Weekend Hike", "category": "trek", "starts_on": later,
+         "description": "An easy trek for beginners."},                                 # "trek" counts for Trekking
+        {"title": "Last Month's Trek", "category": "trek",
+         "starts_on": str(today - timedelta(days=40)), "ends_on": str(today - timedelta(days=39))},
+    ]:
+        assert client.post("/api/opportunities", json=item).status_code == 201
+
+    feed = client.get("/api/opportunities/feed").json()
+    assert [o["title"] for o in feed] == ["Hostel Football League", "Weekend Hike", "Basketball Cup", "Code Sprint"]
+    by_title = {o["title"]: o for o in feed}
+    assert by_title["Hostel Football League"]["matched_interests"] == ["Football"]
+    assert by_title["Weekend Hike"]["matched_interests"] == ["Trekking"]
+    assert by_title["Basketball Cup"]["match_score"] == 1 and by_title["Basketball Cup"]["matched_interests"] == ["Football"]
+    assert by_title["Code Sprint"]["match_score"] == 0 and by_title["Code Sprint"]["matched_interests"] == []
+
+    # Search, category filter and past opportunities.
+    assert [o["title"] for o in client.get("/api/opportunities/feed", params={"q": "football"}).json()] == ["Hostel Football League"]
+    assert [o["title"] for o in client.get("/api/opportunities/feed", params={"category": "trek"}).json()] == ["Weekend Hike"]
+    past = client.get("/api/opportunities/feed", params={"include_past": "true"}).json()
+    assert "Last Month's Trek" in [o["title"] for o in past]
+
+
+def test_feed_counts_teams_and_needs_login(signed_in):
+    client = signed_in
+    opportunity = client.post("/api/opportunities", json={"title": "Hack", "category": "hackathon"}).json()["id"]
+    client.post(f"/api/opportunities/{opportunity}/teams", json={"name": "Open One", "capacity": 3})
+    other = client.post("/api/auth/signup", json={"name": "Bo", "email": "bo@example.com", "password": "test-password"}).json()
+    client.headers["Authorization"] = "Bearer " + other["token"]
+    client.post(f"/api/opportunities/{opportunity}/teams", json={"name": "Full One", "capacity": 2, "default_members": ["Al"]})
+
+    item = client.get("/api/opportunities/feed").json()[0]
+    assert (item["team_count"], item["open_team_count"]) == (2, 1)
+
+    client.headers.pop("Authorization")
+    client.cookies.clear()
+    assert client.get("/api/opportunities/feed").status_code == 401

@@ -2,18 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PROFICIENCY_LEVELS } from "@/components/profile/proficiency";
 import { ApiError } from "@/lib/api/client";
 import { getSkillCatalog } from "@/lib/api/profile";
 import { createTeam, getOpportunities } from "@/lib/api/teams";
 import { useAuth } from "@/providers/AuthProvider";
 import type { Opportunity } from "@/types/opportunity";
 import type { CatalogItem } from "@/types/profile";
-import type { Team } from "@/types/teams";
 import { MemberNamesInput } from "./MemberNamesInput";
 import { SkillRequirementGrid, type Requirements } from "./SkillRequirementGrid";
 
@@ -35,7 +34,6 @@ const emptyForm = (opportunityId = ""): Form => ({
   opportunityId, name: "", description: "", capacity: 4, members: [], hard: {}, preferred: {},
 });
 
-const levelLabel = (level: number) => PROFICIENCY_LEVELS.find((l) => l.value === level)?.label ?? `Level ${level}`;
 
 /** Everything that would stop the team from being created, in plain words. */
 function problems(form: Form, skills: CatalogItem[], maxCapacity: number): string[] {
@@ -61,7 +59,7 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const [created, setCreated] = useState<Team | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     Promise.all([getOpportunities(), getSkillCatalog()])
@@ -110,10 +108,11 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
           skill_id: Number(id), min_level: r.level,
         })),
       });
-      setCreated(team);
+      // Go to the opportunity's page, where the new team is listed (and highlighted).
+      router.push(`/opportunities/${team.opportunity_id}?created=team&team=${team.id}`);
+      // (The button stays disabled while the next page loads.)
     } catch (err) {
       setErrors([err instanceof ApiError ? err.message : "Could not create the team"]);
-    } finally {
       setSaving(false);
     }
   }
@@ -122,49 +121,6 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
     return (
       <main className="flex flex-1 items-center justify-center bg-neutral-100">
         <Loader2 className="size-5 animate-spin text-neutral-500" aria-label="Loading" />
-      </main>
-    );
-  }
-
-  if (created) {
-    return (
-      <main className="flex-1 bg-neutral-100 px-4 py-8">
-        <div className="mx-auto flex max-w-2xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-5">
-          <div>
-            <p className="text-sm text-neutral-500">Team created</p>
-            <h1 className="text-2xl font-semibold text-neutral-900">{created.name}</h1>
-            {created.description && <p className="mt-1 text-sm text-neutral-600">{created.description}</p>}
-          </div>
-          <dl className="grid grid-cols-3 gap-2 text-center">
-            {[["Capacity", created.capacity], ["Members", created.members.length], ["Available slots", created.open_slots]].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-neutral-100 py-2">
-                <dt className="text-xs text-neutral-500">{label}</dt>
-                <dd className="text-lg font-semibold text-neutral-900">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="text-sm text-neutral-700">
-            <span className="font-medium">Members:</span> {created.members.map((m) => m.name).join(", ")}
-          </p>
-          {created.hard_requirements.length > 0 && (
-            <p className="text-sm text-neutral-700">
-              <span className="font-medium">Must have:</span>{" "}
-              {created.hard_requirements.map((r) => `${r.name} (${levelLabel(r.min_level)}+, ${r.count} ${r.count === 1 ? "person" : "people"})`).join(", ")}
-            </p>
-          )}
-          {created.soft_requirements.length > 0 && (
-            <p className="text-sm text-neutral-700">
-              <span className="font-medium">Preferred:</span>{" "}
-              {created.soft_requirements.map((r) => `${r.name} (${levelLabel(r.min_level)}+)`).join(", ")}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <Button onClick={() => { setCreated(null); setForm(emptyForm()); }}>Create another team</Button>
-            <Link href="/" className="inline-flex h-8 items-center rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50">
-              Back to home
-            </Link>
-          </div>
-        </div>
       </main>
     );
   }

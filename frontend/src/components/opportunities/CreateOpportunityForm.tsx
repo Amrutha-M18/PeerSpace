@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ExternalLink, Loader2, Minus, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 import { createOpportunity } from "@/lib/api/opportunities";
-import { OPPORTUNITY_CATEGORIES, type Opportunity, type OpportunityCategory } from "@/types/opportunity";
+import { capitalize } from "@/lib/format";
+import { OPPORTUNITY_CATEGORIES, type OpportunityCategory } from "@/types/opportunity";
 
 const MIN_TEAM_SIZE = 2;
 const MAX_TEAM_SIZE = 20;
@@ -33,21 +34,6 @@ const emptyForm = (): Form => ({
   officialUrl: "", isTeamBased: true, limitTeamSize: true, teamSize: 4,
 });
 
-const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
-
-/** "2026-12-01" -> "1 Dec 2026" (read as a local date, so it never shifts a day). */
-function formatDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-}
-
-function dateRange(start: string | null, end: string | null) {
-  if (start && end) return start === end ? formatDate(start) : `${formatDate(start)} – ${formatDate(end)}`;
-  if (start) return `From ${formatDate(start)}`;
-  if (end) return `Until ${formatDate(end)}`;
-  return "No dates yet";
-}
-
 /** Everything that would stop the opportunity from being saved, in plain words. */
 function problems(form: Form): string[] {
   const list: string[] = [];
@@ -63,7 +49,7 @@ export function CreateOpportunityForm() {
   const [form, setForm] = useState<Form>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const [created, setCreated] = useState<Opportunity | null>(null);
+  const router = useRouter();
 
   function update(patch: Partial<Form>) {
     setForm((current) => ({ ...current, ...patch }));
@@ -90,63 +76,12 @@ export function CreateOpportunityForm() {
         is_team_based: form.isTeamBased,
         team_size: form.isTeamBased && form.limitTeamSize ? form.teamSize : null,
       });
-      setCreated(opportunity);
+      router.push(`/opportunities/${opportunity.id}?created=opportunity`);
+      // (The button stays disabled while the next page loads.)
     } catch (err) {
       setErrors([err instanceof ApiError ? err.message : "Could not save the opportunity"]);
-    } finally {
       setSaving(false);
     }
-  }
-
-  if (created) {
-    return (
-      <main className="flex-1 bg-neutral-100 px-4 py-8">
-        <div className="mx-auto flex max-w-2xl flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-5">
-          <div>
-            <p className="text-sm text-neutral-500">Opportunity added</p>
-            <h1 className="text-2xl font-semibold text-neutral-900">{created.title}</h1>
-            <p className="mt-1 text-sm text-neutral-600">
-              {capitalize(created.category)}
-              {created.organizer && ` · by ${created.organizer}`}
-            </p>
-          </div>
-          {created.description && <p className="text-sm whitespace-pre-line text-neutral-700">{created.description}</p>}
-          <dl className="grid gap-2 text-sm sm:grid-cols-2">
-            <div className="rounded-lg bg-neutral-100 px-3 py-2">
-              <dt className="text-xs text-neutral-500">When</dt>
-              <dd className="font-medium text-neutral-900">{dateRange(created.starts_on, created.ends_on)}</dd>
-            </div>
-            <div className="rounded-lg bg-neutral-100 px-3 py-2">
-              <dt className="text-xs text-neutral-500">Teams</dt>
-              <dd className="font-medium text-neutral-900">
-                {!created.is_team_based ? "Individual (no teams)" : created.team_size ? `Up to ${created.team_size} people per team` : "Any team size"}
-              </dd>
-            </div>
-          </dl>
-          {created.official_url && (
-            <a href={created.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-800 underline underline-offset-2">
-              Official page <ExternalLink className="size-3.5" aria-hidden="true" />
-            </a>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {created.is_team_based && (
-              <Link
-                href={`/teams/new?opportunity=${created.id}`}
-                className="inline-flex h-8 items-center rounded-lg bg-neutral-900 px-3 text-sm font-medium text-white hover:bg-neutral-800"
-              >
-                Create a team for it
-              </Link>
-            )}
-            <Button variant="outline" onClick={() => { setCreated(null); setForm(emptyForm()); }}>
-              Add another opportunity
-            </Button>
-            <Link href="/" className="inline-flex h-8 items-center rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50">
-              Back to home
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
   }
 
   return (

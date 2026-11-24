@@ -17,6 +17,20 @@ export interface Opportunity {
   created_at: string;
 }
 
+/** GET /api/opportunities/feed: an opportunity plus how it fits the signed-in user. */
+export interface FeedItem extends Opportunity {
+  match_score: number; // 0 = doesn't overlap with the user's interests
+  matched_interests: string[]; // best match first
+  team_count: number;
+  open_team_count: number;
+}
+
+export interface FeedFilters {
+  q?: string;
+  category?: OpportunityCategory;
+  include_past?: boolean;
+}
+
 /** POST /api/opportunities */
 export interface OpportunityCreate {
   title: string;
