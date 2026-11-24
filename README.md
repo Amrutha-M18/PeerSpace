@@ -165,9 +165,24 @@ This project is under active development.
 The current homepage is temporary. Features listed as in progress
 are not yet fully integrated into the application.
 
-## seeding Scripts
+## Seeding
+
+One command loads everything: the skill and interest lists, then demo users (with skills
+and interests), opportunities, teams and pending join requests.
+
 ```
-    python -m backend.seed_catalog            # both
-    python -m backend.seed_catalog skills     # only backend/seed_data/skills.txt
-    python -m backend.seed_catalog hobbies    # only backend/seed_data/hobbies.txt
+python -m backend.seed            # add whatever is missing (safe to run again)
+python -m backend.seed --reset    # delete the demo data, then load it fresh
+```
+
+Every demo user logs in with the password `peerspace123`, e.g. `diya@peerspace.demo`
+(owner of the "Pixel Pushers" team, which has three join requests to rank).
+The demo data is in `backend/seed_data/demo.json`; skills and interests are in
+`skills.txt` and `hobbies.txt` next to it.
+
+To load only the skill and interest lists:
+```
+python -m backend.seed_catalog            # both
+python -m backend.seed_catalog skills     # only backend/seed_data/skills.txt
+python -m backend.seed_catalog hobbies    # only backend/seed_data/hobbies.txt
 ```

@@ -1,3 +1,5 @@
+"""Load only the skill and interest lists. To seed everything (with demo data), use `python -m backend.seed`."""
+
 import sys
 from pathlib import Path
 
@@ -22,20 +24,25 @@ def read_names(filename: str) -> list[str]:
     return names
 
 
+def load_catalogue(connection, key: str) -> str:
+    """Add the names from one list (skipping ones already there) and return a one-line summary."""
+    model, filename = CATALOGUES[key]
+    names = read_names(filename)
+    before = connection.scalar(select(func.count()).select_from(model))
+    connection.execute(
+        insert(model).values([{"name": name} for name in names])
+        .on_conflict_do_nothing(index_elements=[func.lower(func.btrim(model.name))])
+    )
+    after = connection.scalar(select(func.count()).select_from(model))
+    return f"{key}: {after - before} added, {after} in the table ({filename} lists {len(names)})"
+
+
 def seed(which: list[str]) -> None:
     Base.metadata.create_all(engine)
     migrate_profiles(engine)
     with engine.begin() as connection:
         for key in which:
-            model, filename = CATALOGUES[key]
-            names = read_names(filename)
-            before = connection.scalar(select(func.count()).select_from(model))
-            connection.execute(
-                insert(model).values([{"name": name} for name in names])
-                .on_conflict_do_nothing(index_elements=[func.lower(func.btrim(model.name))])
-            )
-            after = connection.scalar(select(func.count()).select_from(model))
-            print(f"{key}: {after - before} added, {after} in the table ({filename} lists {len(names)})")
+            print(load_catalogue(connection, key))
 
 
 if __name__ == "__main__":
