@@ -87,19 +87,42 @@ class Team(Base):
     opportunity_id: Mapped[int] = mapped_column(ForeignKey("opportunities.id"))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String(100))
-    capacity: Mapped[int]                                      
-    needed_skills: Mapped[list] = mapped_column(JSON, default=list)
-    status: Mapped[str] = mapped_column(String(20), default="open")  
+    description: Mapped[str | None] = mapped_column(String(1000))
+    capacity: Mapped[int]                                             # includes the owner
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open, full
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
+class TeamSkill(Base):
+    """A skill a team asks for.
+
+    Hard requirements must be met (level >= min_level); `count` is how many
+    members the team needs with that skill. Soft requirements are preferences
+    and always have count 1.
+    """
+    __tablename__ = "team_skills"
+
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), primary_key=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), primary_key=True)
+    min_level: Mapped[int]
+    is_hard: Mapped[bool]
+    count: Mapped[int] = mapped_column(default=1, server_default=text("1"))
+
+    __table_args__ = (
+        CheckConstraint("min_level BETWEEN 1 AND 5", name="ck_team_skills_min_level"),
+        CheckConstraint("count >= 1", name="ck_team_skills_count"),
+    )
+
+
 class TeamMember(Base):
+    """A team member. People not on PeerSpace are added by name only (user_id is empty)."""
     __tablename__ = "team_members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    role: Mapped[str] = mapped_column(String(20), default="member") 
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(String(100))
+    role: Mapped[str] = mapped_column(String(20), default="member")  # owner, member
     joined_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __table_args__ = (UniqueConstraint("team_id", "user_id"),)

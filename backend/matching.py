@@ -32,7 +32,7 @@ COVERED_WEIGHT = 0.25  # skills the team already has count a quarter
 
 @dataclass
 class Requirement:
-    """One skill a team asks for (stored in teams.needed_skills)."""
+    """One skill a team asks for (stored in the team_skills table)."""
     skill_id: int
     min_level: int = 1
     must_have: bool = False
@@ -108,7 +108,7 @@ def score_user(
 
 
 def parse_requirements(needed_skills: list) -> list[Requirement]:
-    """Read teams.needed_skills.
+    """Read requirements from a JSON-style list (handy in tests and scripts).
 
     Expected format:  [{"skill_id": 3, "min_level": 3, "must_have": true}, ...]
     A plain list of skill IDs ([3, 7]) also works: level 1, not must-have.

@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from .auth import get_current_user
 from .database import get_db
-from .matching import parse_requirements, rank_users
-from .models import JoinRequest, Team, TeamMember, User, UserSkill
+from .matching import Requirement, rank_users
+from .models import JoinRequest, Team, TeamMember, TeamSkill, User, UserSkill
 
 router = APIRouter(prefix="/api/teams", tags=["matching"])
 
@@ -39,14 +39,22 @@ def ranked_requests(
     requests = db.scalars(
         select(JoinRequest).where(JoinRequest.team_id == team_id, JoinRequest.status == "pending")
     ).all()
-    member_ids = list(db.scalars(select(TeamMember.user_id).where(TeamMember.team_id == team_id)))
+    # Members added by name have no account and no skills on record, so only registered members count.
+    member_ids = list(db.scalars(
+        select(TeamMember.user_id).where(TeamMember.team_id == team_id, TeamMember.user_id.is_not(None))
+    ))
+    # Hard requirements are must-haves. (Their `count` is used by the approval feature.)
+    requirements = [
+        Requirement(skill_id=row.skill_id, min_level=row.min_level, must_have=row.is_hard)
+        for row in db.scalars(select(TeamSkill).where(TeamSkill.team_id == team_id))
+    ]
 
     requester_ids = [request.user_id for request in requests]
     levels = skill_levels(db, requester_ids + member_ids)
 
     ranking = rank_users(
         candidates={user_id: levels[user_id] for user_id in requester_ids},
-        requirements=parse_requirements(team.needed_skills),
+        requirements=requirements,
         team_member_skills=[levels[user_id] for user_id in member_ids],
         focus_skill_ids=set(focus),
     )
