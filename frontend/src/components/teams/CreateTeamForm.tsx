@@ -38,12 +38,13 @@ const emptyForm = (opportunityId = ""): Form => ({
 const levelLabel = (level: number) => PROFICIENCY_LEVELS.find((l) => l.value === level)?.label ?? `Level ${level}`;
 
 /** Everything that would stop the team from being created, in plain words. */
-function problems(form: Form, skills: CatalogItem[]): string[] {
+function problems(form: Form, skills: CatalogItem[], maxCapacity: number): string[] {
   const list: string[] = [];
   const skillName = (id: number) => skills.find((s) => s.id === id)?.name ?? `Skill ${id}`;
   if (!form.opportunityId) list.push("Choose the opportunity this team is for");
   if (!form.name.trim()) list.push("Give the team a name");
   if (1 + form.members.length > form.capacity) list.push("More members than the team's capacity");
+  if (form.capacity > maxCapacity) list.push(`Teams for this opportunity can have at most ${maxCapacity} people`);
   const tooMany = Object.entries(form.hard)
     .filter(([, r]) => r.count > form.capacity)
     .map(([id]) => skillName(Number(id)));
@@ -65,13 +66,19 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
   useEffect(() => {
     Promise.all([getOpportunities(), getSkillCatalog()])
       .then(([opps, catalog]) => {
-        setOpportunities(opps);
+        const teamBased = opps.filter((o) => o.is_team_based);
+        setOpportunities(teamBased);
         setSkills(catalog);
+        // Opened as /teams/new?opportunity=ID: fit the default capacity to that opportunity's limit.
+        const limit = teamBased.find((o) => String(o.id) === initialOpportunityId)?.team_size;
+        if (limit) setForm((current) => ({ ...current, capacity: Math.min(current.capacity, limit) }));
       })
       .catch((err) => setErrors([err instanceof ApiError ? err.message : "Could not load the form"]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialOpportunityId]);
 
+  const opportunity = opportunities.find((o) => String(o.id) === form.opportunityId);
+  const maxCapacity = opportunity?.team_size ?? MAX_CAPACITY; // the opportunity can set a smaller limit
   const availableSlots = form.capacity - 1 - form.members.length;
   const hardIds = useMemo(() => new Set(Object.keys(form.hard).map(Number)), [form.hard]);
   const preferredIds = useMemo(() => new Set(Object.keys(form.preferred).map(Number)), [form.preferred]);
@@ -83,7 +90,7 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const found = problems(form, skills);
+    const found = problems(form, skills, maxCapacity);
     if (found.length) {
       setErrors(found);
       return;
@@ -177,7 +184,12 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
             <select
               id="opportunity"
               value={form.opportunityId}
-              onChange={(e) => update({ opportunityId: e.target.value })}
+              onChange={(e) => {
+                const chosen = opportunities.find((o) => String(o.id) === e.target.value);
+                const limit = chosen?.team_size ?? MAX_CAPACITY;
+                // Shrink the team to fit the opportunity's limit (but never below the people already added).
+                update({ opportunityId: e.target.value, capacity: Math.max(Math.min(form.capacity, limit), 1 + form.members.length) });
+              }}
               className="h-8 rounded-lg border border-neutral-300 bg-white px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
             >
               <option value="">{opportunities.length ? "Choose an opportunity" : "No opportunities yet"}</option>
@@ -187,6 +199,13 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
                 </option>
               ))}
             </select>
+            <p className="text-xs text-neutral-500">
+              Not listed?{" "}
+              <Link href="/opportunities/new" className="font-medium text-neutral-800 underline underline-offset-2">
+                Add the opportunity
+              </Link>{" "}
+              first.
+            </p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="team-name">Team name</Label>
@@ -228,14 +247,16 @@ export function CreateTeamForm({ initialOpportunityId }: { initialOpportunityId?
                 <button
                   type="button"
                   aria-label="Increase capacity"
-                  onClick={() => update({ capacity: Math.min(MAX_CAPACITY, form.capacity + 1) })}
-                  disabled={form.capacity >= MAX_CAPACITY}
+                  onClick={() => update({ capacity: Math.min(maxCapacity, form.capacity + 1) })}
+                  disabled={form.capacity >= maxCapacity}
                   className="flex size-8 items-center justify-center rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-50 disabled:opacity-30"
                 >
                   <Plus className="size-3.5" />
                 </button>
               </div>
-              <p className="text-xs text-neutral-500">Including you. {MIN_CAPACITY}–{MAX_CAPACITY} people.</p>
+              <p className="text-xs text-neutral-500">
+                Including you. {MIN_CAPACITY}–{maxCapacity} people{opportunity?.team_size ? " (this opportunity's limit)" : ""}.
+              </p>
             </div>
             <div className="rounded-lg bg-neutral-100 px-3 py-2">
               <p className="text-xs text-neutral-500">Available slots</p>

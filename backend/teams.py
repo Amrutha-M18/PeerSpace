@@ -143,6 +143,10 @@ def create_team(
         raise HTTPException(status_code=404, detail="Opportunity not found")
     if not opportunity.is_team_based:
         raise HTTPException(status_code=422, detail="This opportunity doesn't take teams")
+    if opportunity.team_size and data.capacity > opportunity.team_size:
+        raise HTTPException(
+            status_code=422, detail=f"Teams for this opportunity can have at most {opportunity.team_size} people",
+        )
 
     # A student can be in only one team per opportunity.
     already_in_team = db.scalar(
