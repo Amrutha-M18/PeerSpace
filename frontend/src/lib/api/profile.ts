@@ -1,7 +1,10 @@
 import { apiFetch } from "./client";
-import type { CatalogItem, Profile, ProfileUpdate } from "@/types/profile";
+import type { CatalogItem, Profile, ProfileUpdate, PublicProfile } from "@/types/profile";
 
 export const getProfile = () => apiFetch<Profile>("/me");
+
+/** Another user's public profile (name and skills). */
+export const getUserProfile = (id: number) => apiFetch<PublicProfile>(`/users/${id}`);
 
 export const saveProfile = (data: ProfileUpdate) =>
   apiFetch<Profile>("/me", { method: "PUT", body: data });

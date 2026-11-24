@@ -26,6 +26,13 @@ export interface Profile {
   created_at: string;
 }
 
+/** GET /api/users/{id}: what anyone signed in can see about a user. */
+export interface PublicProfile {
+  id: number;
+  name: string;
+  skills: ProfileSkill[];
+}
+
 export interface ProfileUpdate {
   name: string;
   skills: { skill_id: number; level: number }[];

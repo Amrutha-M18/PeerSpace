@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Response
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -75,6 +75,13 @@ class ProfileSkill(SkillSelection):
 class ProfileHobby(BaseModel):
     hobby_id: int
     name: str
+
+
+class PublicProfileOut(BaseModel):
+    """What any signed-in student can see about another user (no email)."""
+    id: int
+    name: str
+    skills: list[ProfileSkill]
 
 
 class ProfileOut(BaseModel):
@@ -201,3 +208,15 @@ def create_hobby(
     user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     return add_to_catalog(db, Hobby, data.name, response)
+
+
+@router.get("/users/{user_id}", response_model=PublicProfileOut)
+def get_user_profile(
+    user_id: int = Path(gt=0, le=2147483647),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    profile = read_profile(db, target)
+    return PublicProfileOut(id=profile.id, name=profile.name, skills=profile.skills)

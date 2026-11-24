@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +28,7 @@ function missingLevels(selected: Selections, catalog: CatalogItem[]): string[] {
 }
 
 export function ProfileEditor() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth(); // (app)/layout.tsx guarantees a signed-in user
 
   const [skillCatalog, setSkillCatalog] = useState<CatalogItem[]>([]);
   const [interestCatalog, setInterestCatalog] = useState<CatalogItem[]>([]);
@@ -42,11 +40,6 @@ export function ProfileEditor() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showMissing, setShowMissing] = useState(false);
-
-  // Send logged-out visitors to the login page, then back here.
-  useEffect(() => {
-    if (!authLoading && !user) router.replace("/login?next=/profile");
-  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -102,16 +95,16 @@ export function ProfileEditor() {
     }
   }
 
-  if (authLoading || !user || loading) {
+  if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-100">
+      <main className="flex flex-1 items-center justify-center bg-neutral-100">
         <Loader2 className="size-5 animate-spin text-neutral-500" aria-label="Loading" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-neutral-100 px-4 py-8">
+    <main className="flex-1 bg-neutral-100 px-4 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-4">
         <header>
           <h1 className="text-2xl font-semibold text-neutral-900">Your profile</h1>
