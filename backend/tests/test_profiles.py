@@ -159,3 +159,22 @@ def test_added_hobby_is_shared_and_reused(signed_in):
     again = signed_in.post("/api/hobbies", json={"name": "chess"})
     assert again.status_code == 200 and again.json() == created.json()
     assert created.json() in signed_in.get("/api/hobbies").json()
+
+
+def test_public_profile_by_id(signed_in):
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    me = signed_in.put("/api/me", json=profile_payload()).json()
+    response = signed_in.get(f"/api/users/{me['id']}")
+    assert response.status_code == 200
+    assert response.json() == {"id": me["id"], "name": "Updated Student", "skills": me["skills"]}
+
+    other = signed_in.post("/api/auth/signup", json={
+        "name": "Other", "email": "other@example.com", "password": "test-password",
+    }).json()["user"]
+    assert signed_in.get(f"/api/users/{other['id']}").json() == {"id": other["id"], "name": "Other", "skills": []}
+
+    assert signed_in.get("/api/users/999999").status_code == 404
+    assert signed_in.get("/api/users/0").status_code == 422
+    assert TestClient(app).get(f"/api/users/{me['id']}").status_code == 401
