@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from .auth import get_current_user
 from .database import get_db
-from .models import Opportunity, Skill, Team, TeamMember, TeamSkill, User
+from .models import Opportunity, Skill, Team, TeamMember, TeamSkill, User, UserSkill
 
 router = APIRouter(prefix="/api", tags=["teams"])
 
@@ -73,10 +73,12 @@ class MemberOut(BaseModel):
 
 class HardRequirementOut(HardRequirement):
     name: str
+    members_with_skill: int = 0  # registered members already at min_level or above
 
 
 class SoftRequirementOut(SoftRequirement):
     name: str
+    members_with_skill: int = 0
 
 
 class TeamOut(BaseModel):
@@ -104,6 +106,18 @@ def read_team(db: Session, team: Team) -> TeamOut:
         .where(TeamSkill.team_id == team.id)
         .order_by(Skill.name)
     ).all()
+    # Skill levels of registered members (people added by name have none on record).
+    member_levels: list[dict[int, int]] = []
+    member_ids = [m.user_id for m in members if m.user_id]
+    if member_ids:
+        levels: dict[int, dict[int, int]] = {user_id: {} for user_id in member_ids}
+        for row in db.scalars(select(UserSkill).where(UserSkill.user_id.in_(member_ids))):
+            levels[row.user_id][row.skill_id] = row.level
+        member_levels = list(levels.values())
+
+    def having(r: TeamSkill) -> int:
+        return sum(1 for skills in member_levels if skills.get(r.skill_id, 0) >= r.min_level)
+
     return TeamOut(
         id=team.id, opportunity_id=team.opportunity_id, owner_id=team.owner_id,
         name=team.name, description=team.description, capacity=team.capacity,
@@ -111,11 +125,12 @@ def read_team(db: Session, team: Team) -> TeamOut:
         created_at=team.created_at,
         members=[MemberOut(id=m.id, name=m.name, user_id=m.user_id, role=m.role) for m in members],
         hard_requirements=[
-            HardRequirementOut(skill_id=r.skill_id, name=name, min_level=r.min_level, count=r.count)
+            HardRequirementOut(skill_id=r.skill_id, name=name, min_level=r.min_level, count=r.count,
+                               members_with_skill=having(r))
             for r, name in requirements if r.is_hard
         ],
         soft_requirements=[
-            SoftRequirementOut(skill_id=r.skill_id, name=name, min_level=r.min_level)
+            SoftRequirementOut(skill_id=r.skill_id, name=name, min_level=r.min_level, members_with_skill=having(r))
             for r, name in requirements if not r.is_hard
         ],
     )

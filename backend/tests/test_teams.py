@@ -40,8 +40,8 @@ def test_create_team(signed_in):
     assert owner["role"] == "owner" and owner["user_id"] == team["owner_id"] and owner["name"] == "Student"
     assert kabir == {"id": kabir["id"], "name": "Kabir", "user_id": None, "role": "member"}
     assert meera["name"] == "Meera"  # trimmed
-    assert team["hard_requirements"] == [{"skill_id": 1, "name": "Python", "min_level": 3, "count": 2}]
-    assert team["soft_requirements"] == [{"skill_id": 2, "name": "SQL", "min_level": 2}]
+    assert team["hard_requirements"] == [{"skill_id": 1, "name": "Python", "min_level": 3, "count": 2, "members_with_skill": 0}]
+    assert team["soft_requirements"] == [{"skill_id": 2, "name": "SQL", "min_level": 2, "members_with_skill": 0}]
     assert signed_in.get(f"/api/teams/{team['id']}").json() == team
     assert signed_in.get(f"/api/opportunities/{opp}/teams").json() == [team]
 

@@ -24,3 +24,17 @@ export function isOver(start: string | null, end: string | null) {
   const todayText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return last < todayText;
 }
+
+/** "just now", "5 min ago", "3 hours ago", "2 days ago", then a date. */
+export function timeAgo(iso: string) {
+  // The database stores UTC times without a zone ("2026-11-24T09:12:07"); read those as UTC.
+  const time = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`);
+  const minutes = Math.max(0, Math.round((Date.now() - time.getTime()) / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.round(hours / 24);
+  if (days < 14) return `${days} ${days === 1 ? "day" : "days"} ago`;
+  return time.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}

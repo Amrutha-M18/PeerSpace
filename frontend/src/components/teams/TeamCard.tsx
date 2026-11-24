@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  BadgeCheck, Check, CircleSlash, Clock, Crown, Info, Loader2, Lock, Send, Star, UserPlus, UsersRound, X,
+  ArrowUpRight, BadgeCheck, Check, CircleSlash, Clock, Crown, Info, Loader2, Lock, Send, Star, UserPlus, UsersRound, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROFICIENCY_LEVELS } from "@/components/profile/proficiency";
+import type { JoinRequest } from "@/types/join-reqeust";
 import type { Team } from "@/types/teams";
 
 /** What the signed-in user can do with a team, shown on its button. */
@@ -22,6 +23,20 @@ export type JoinState =
   | "closed";       // the opportunity is over
 
 const levelLabel = (level: number) => PROFICIENCY_LEVELS.find((l) => l.value === Math.min(level, 4))?.label ?? `Level ${level}`;
+
+/** Where the signed-in user stands with a team. `latest` = their newest request to it, if any. */
+export function joinStateFor({ team, userId, myTeam, latest, over }: {
+  team: Team; userId?: number; myTeam?: Team; latest?: JoinRequest; over: boolean;
+}): JoinState {
+  if (team.owner_id === userId) return "owner";
+  if (myTeam?.id === team.id) return "member";
+  if (latest?.status === "pending" || latest?.status === "rejected") return latest.status;
+  // (An "accepted" request for a team they're no longer in, e.g. after being removed, counts as none.)
+  if (myTeam) return "in-other-team";
+  if (over) return "closed";
+  if (team.open_slots === 0) return "full";
+  return "join";
+}
 
 /** Must-haves the viewer doesn't meet yet (by name). */
 export function missingMustHaves(team: Team, mySkills: Map<number, number>) {
@@ -79,7 +94,9 @@ export function TeamCard({ team, state, mySkills, highlight, pendingCount, onJoi
     >
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="truncate font-semibold text-neutral-900">{team.name}</h3>
+          <h3 className="truncate font-semibold text-neutral-900">
+            <Link href={`/teams/${team.id}`} className="hover:underline">{team.name}</Link>
+          </h3>
           <p className="truncate text-xs text-neutral-500">by {owner?.name ?? "Unknown"}</p>
         </div>
         <button
@@ -158,6 +175,7 @@ export function TeamCard({ team, state, mySkills, highlight, pendingCount, onJoi
           busy={busy}
           writing={writing}
           pendingCount={pendingCount}
+          href={state === "owner" ? `/teams/${team.id}#requests` : undefined}
           onClick={() => (writing ? run(() => onJoin(note.trim())) : setWriting(true))}
         />
         {writing && (
@@ -189,6 +207,9 @@ export function TeamCard({ team, state, mySkills, highlight, pendingCount, onJoi
         className="absolute inset-x-0 top-full z-30 mt-1.5 grid max-h-96 gap-3 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-3.5 text-sm shadow-lg"
       >
         {team.description && <p className="text-neutral-700">{team.description}</p>}
+        <Link href={`/teams/${team.id}`} className="inline-flex w-fit items-center gap-1 text-xs font-medium text-neutral-900 hover:underline">
+          Open team page <ArrowUpRight className="size-3.5" aria-hidden="true" />
+        </Link>
 
         <div className="grid gap-1">
           <h4 className="text-xs font-medium tracking-wide text-neutral-500 uppercase">Members</h4>
@@ -271,14 +292,19 @@ const BUTTONS: Record<JoinState, { label: string; Icon: React.ComponentType<{ cl
 };
 
 /** One button per team; its text always says where the user stands. */
-function JoinButton({ state, busy, writing, pendingCount, onClick }: {
-  state: JoinState; busy: boolean; writing: boolean; pendingCount?: number; onClick: () => void;
+export function JoinButton({ state, busy, writing, pendingCount, href, onClick }: {
+  state: JoinState; busy: boolean; writing: boolean; pendingCount?: number;
+  href?: string; // makes a status badge a link (e.g. the owner's "Your team · 2 requests")
+  onClick: () => void;
 }) {
   const { label, Icon, active } = BUTTONS[state];
   if (!active) {
+    const Badge = href ? Link : "span";
     return (
-      <span
+      <Badge
+        href={href as string}
         className={cn(
+          href && "hover:bg-neutral-200",
           "inline-flex h-7 items-center gap-1 rounded-lg border px-2.5 text-xs font-medium",
           state === "pending" || state === "accepted" || state === "owner" || state === "member"
             ? "border-neutral-800 bg-neutral-100 text-neutral-900"
@@ -289,7 +315,7 @@ function JoinButton({ state, busy, writing, pendingCount, onClick }: {
         <Icon className="size-3.5" />
         {label}
         {state === "owner" && pendingCount ? <span className="text-neutral-500">· {pendingCount} {pendingCount === 1 ? "request" : "requests"}</span> : null}
-      </span>
+      </Badge>
     );
   }
   return (

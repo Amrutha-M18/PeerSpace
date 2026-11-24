@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, CalendarDays, CircleCheck, ExternalLink, Loader2, Plus, Sparkles, UserRound, UsersRound, X,
@@ -15,7 +15,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import type { JoinRequest } from "@/types/join-reqeust";
 import type { Opportunity } from "@/types/opportunity";
 import type { Team } from "@/types/teams";
-import { TeamCard, missingMustHaves, type JoinState } from "@/components/teams/TeamCard";
+import { TeamCard, joinStateFor, missingMustHaves, type JoinState } from "@/components/teams/TeamCard";
 import { CATEGORY_ICONS } from "./OpportunityCard";
 
 type Props = {
@@ -53,23 +53,13 @@ export function OpportunityTeamsView({ opportunityId, created, highlightTeamId }
   const myTeam = teams.find((t) => t.members.some((m) => m.user_id === user?.id));
   const over = opportunity ? isOver(opportunity.starts_on, opportunity.ends_on) : false;
 
-  function stateFor(team: Team): JoinState {
-    if (team.owner_id === user?.id) return "owner";
-    if (team === myTeam) return "member";
-    const latest = requests.find((r) => r.team_id === team.id);
-    if (latest?.status === "pending" || latest?.status === "accepted" || latest?.status === "rejected") return latest.status;
-    if (myTeam) return "in-other-team";
-    if (over) return "closed";
-    if (team.open_slots === 0) return "full";
-    return "join";
-  }
+  const stateFor = (team: Team): JoinState =>
+    joinStateFor({ team, userId: user?.id, myTeam, latest: requests.find((r) => r.team_id === team.id), over });
 
   // My team first, then open teams I fit, then other open teams, then full ones.
-  const sorted = useMemo(() => {
-    const rank = (t: Team) =>
-      t === myTeam ? 0 : t.open_slots === 0 ? 3 : missingMustHaves(t, mySkills).length === 0 ? 1 : 2;
-    return [...teams].sort((a, b) => rank(a) - rank(b) || b.open_slots - a.open_slots || a.id - b.id);
-  }, [teams, myTeam, mySkills]);
+  const rank = (t: Team) =>
+    t === myTeam ? 0 : t.open_slots === 0 ? 3 : missingMustHaves(t, mySkills).length === 0 ? 1 : 2;
+  const sorted = [...teams].sort((a, b) => rank(a) - rank(b) || b.open_slots - a.open_slots || a.id - b.id);
 
   async function join(team: Team, message: string) {
     const request = await requestToJoin(team.id, message);
